@@ -1,0 +1,7 @@
+all:
+  amazon_sqs_test_queue: '' #TODO fill
+  test: 'test' # don't chage
+  driver: 'fpMqAmazonQueue'
+  driver_options:
+    id: '' #TODO fill
+    key: '' #TODO fill
