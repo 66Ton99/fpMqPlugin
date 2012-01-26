@@ -38,10 +38,10 @@ class fpMqDaemon
    */
   public function run()
   {
+//     echo "\n", 'Start daemon ', date('Y-m-d H:i:s'), "\n";
     while (true) {
-      call_user_func($this->callback, $this);
+      call_user_func($this->callback);
       sleep($this->interval);
-      echo '.';
     }
   }
 }

@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../../lib/fpMqFunction.php';
  * @todo add own queue for each test
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
-class amazon extends PHPUnit_Framework_TestCase
+class fpMqAmazonQueueTestCase extends PHPUnit_Framework_TestCase
 {
   
   const MESSAGE = 'Test message';
@@ -33,9 +33,9 @@ class amazon extends PHPUnit_Framework_TestCase
   {
     fpMqFunction::loadConfig('config/fp_mq.yml');
     $options = sfConfig::get('fp_mq_driver_options');
-    $options['queue_url'] = sfConfig::get('fp_mq_amazon_sqs_test_queue');
     $connection = new fpMqAmazonQueue($options);
     static::$service = new Zend_Queue($connection);
+    static::$service->setOption('queueUrl', sfConfig::get('fp_mq_amazon_sqs_test_queue'));
     $this->assertNotNull(static::$service);
   }
   

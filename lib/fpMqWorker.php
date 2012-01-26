@@ -28,7 +28,6 @@ class fpMqWorker
   {
     $this->callback = $callback;
     $options = sfConfig::get('fp_mq_driver_options');
-    $options['queue_url'] = sfConfig::get('fp_mq_amazon_sqs_test_queue'); // TODO change
     $driver = new fpMqAmazonQueue($options);
     $this->queue = new Zend_Queue($driver);
   }
@@ -36,18 +35,28 @@ class fpMqWorker
   /**
    * 
    *
-   * @param fpMqDaemon $daemon
-   *
    * @return void
    */
-  public function process($daemon)
+  public function process()
   {
-    $messages = $this->queue->receive(1, $this->lockTime);
-    if (count($messages) && $message = $messages->current()) {
-      $this->createFork($message);
+    foreach ($this->queue->getQueues() as $queue)
+    {
+      $this->queue->setOption('queueUrl', $queue);
+      $messages = $this->queue->receive(1, $this->lockTime);
+      if (count($messages) && $message = $messages->current())
+      {
+        $tmp = explode('/', $queue);
+        $queueName = array_pop($tmp);
+        $this->createFork($message, $queueName);
+      }
     }
   }
   
+  /**
+   * Run daemon process
+   *
+   * @return void
+   */
   public function run()
   {
     $daemon = new fpMqDaemon(array($this, 'process'));
@@ -59,7 +68,7 @@ class fpMqWorker
    *
    * @return bool
    */
-  public function createFork($message)
+  public function createFork($message, $queueName)
   {
     switch ($pid = pcntl_fork()) {
       case -1:
@@ -67,8 +76,10 @@ class fpMqWorker
         break;
   
       case 0:
-        call_user_func($this->callback, $message->body);
-        $this->queue->deleteMessage($message);
+        if (call_user_func($this->callback, $message->body, $queueName))
+        {
+          $this->queue->deleteMessage($message);
+        }
         exit; // The end of the forked process
   
       default:
