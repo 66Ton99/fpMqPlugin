@@ -1,28 +1,24 @@
 <?php
 
 require_once 'PHPUnit/Framework/TestCase.php';
-require_once 'Zend/Queue.php';
-require_once 'Zend/Queue/Message/Iterator.php';
-require_once 'Zend/Queue/Message.php';
-require_once __DIR__ . '/../../../lib/fpMqAmazonQueue.class.php';
-require_once __DIR__ . '/../../../lib/fpMqFunction.class.php';
+require_once __DIR__ . '/../../../lib/fpMqQueue.class.php';
 
 /**
  * Amazon SQS test case.
  * @todo add own queue for each test
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
-class fpMqAmazonQueueTestCase extends PHPUnit_Framework_TestCase
+class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
 {
   
   const MESSAGE = 'Test message';
   
-  static protected $messageId; 
+  static protected $messageId;
   
   /**
    * Connection
    * 
-   * @var Zend_Queue
+   * @var fpMqQueue
    */
   protected static $service;
   
@@ -31,11 +27,7 @@ class fpMqAmazonQueueTestCase extends PHPUnit_Framework_TestCase
    */
   public function connect()
   {
-    fpMqFunction::loadConfig('config/fp_mq.yml');
-    $options = sfConfig::get('fp_mq_driver_options');
-    $connection = new fpMqAmazonQueue($options);
-    static::$service = new Zend_Queue($connection);
-    static::$service->setOption('queueUrl', sfConfig::get('fp_mq_amazon_sqs_test_queue'));
+    static::$service = fpMqQueue::getInstance();
     $this->assertNotNull(static::$service);
   }
   
@@ -45,7 +37,7 @@ class fpMqAmazonQueueTestCase extends PHPUnit_Framework_TestCase
    */
   public function send()
   {
-    static::$messageId = static::$service->send(static::MESSAGE);
+    static::$messageId = static::$service->send(static::MESSAGE, 'testQueue');
   }
   
   /**
@@ -65,7 +57,7 @@ class fpMqAmazonQueueTestCase extends PHPUnit_Framework_TestCase
     } while(!count($responses));
     $this->assertEquals(1, count($responses));
     $this->assertInstanceOf('Zend_Queue_Message', $response = $responses->current());
-    $this->assertEquals(static::MESSAGE, $response->body);
+    $this->assertEquals(static::MESSAGE, json_decode($response->body)); // TODO find better way
     return $response;
   }
   

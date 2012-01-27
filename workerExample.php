@@ -15,7 +15,6 @@ fpMqFunction::loadConfig('config/fp_mq.yml');
  */
 function callService($message, $queueName)
 {
-  var_dump($message);
   echo 'Queue name: ', $queueName, "\n";
   echo 'Message: ', print_r($message, true), "\n";
   return true;
