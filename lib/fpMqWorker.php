@@ -76,7 +76,7 @@ class fpMqWorker
         break;
   
       case 0:
-        if (call_user_func($this->callback, $message->body, $queueName))
+        if (call_user_func($this->callback, json_decode($message->body), $queueName))
         {
           $this->queue->deleteMessage($message);
         }
