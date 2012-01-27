@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../lib/fpMqFunction.php';
-require_once __DIR__ . '/../lib/fpMqWorker.php';
+require_once __DIR__ . '/lib/fpMqFunction.class.php';
+require_once __DIR__ . '/lib/fpMqWorker.class.php';
 
 fpMqFunction::loadConfig('config/fp_mq.yml');
 
@@ -15,8 +15,9 @@ fpMqFunction::loadConfig('config/fp_mq.yml');
  */
 function callService($message, $queueName)
 {
+  var_dump($message);
   echo 'Queue name: ', $queueName, "\n";
-  echo 'Message: ', $message, "\n";
+  echo 'Message: ', print_r($message, true), "\n";
   return true;
 }
 

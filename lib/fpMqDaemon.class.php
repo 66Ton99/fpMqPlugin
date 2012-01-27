@@ -1,6 +1,5 @@
 <?php
-declare(ticks = 1);
-require_once __DIR__ . '/../lib/fpMqFunction.php';
+require_once __DIR__ . '/fpMqFunction.class.php';
 
 /**
  * 

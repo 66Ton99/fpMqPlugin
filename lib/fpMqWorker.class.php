@@ -1,10 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../lib/fpMqDaemon.php';
-require_once __DIR__ . '/../lib/fpMqAmazonQueue.php';
-require_once 'Zend/Queue.php';
-require_once 'Zend/Queue/Message/Iterator.php';
-require_once 'Zend/Queue/Message.php';
+require_once __DIR__ . '/fpMqDaemon.class.php';
+require_once __DIR__ . '/fpMqQueue.class.php';
 
 /**
  * 
@@ -23,7 +20,7 @@ class fpMqWorker
   /**
    * Queue
    * 
-   * @var Zend_Queue
+   * @var fpMqQueue
    */
   protected $queue;
   
@@ -51,8 +48,7 @@ class fpMqWorker
     $this->daemon = new fpMqDaemon(array($this, 'process'));
     $this->callback = $callback;
     $options = sfConfig::get('fp_mq_driver_options');
-    $driver = new fpMqAmazonQueue($options);
-    $this->queue = new Zend_Queue($driver);
+    $this->queue = fpMqQueue::getInstance();
   }
   
   /**
@@ -94,7 +90,7 @@ class fpMqWorker
   {
     switch ($pid = pcntl_fork()) {
       case -1:
-        echo "Fork failed\n";
+        throw new Exception('Fork failed');
         break;
   
       case 0:

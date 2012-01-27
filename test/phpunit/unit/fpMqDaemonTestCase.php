@@ -1,7 +1,7 @@
 <?php
 
 require_once 'PHPUnit/Framework/TestCase.php';
-require_once __DIR__ . '/../../../lib/fpMqDaemon.php';
+require_once __DIR__ . '/../../../lib/fpMqDaemon.class.php';
 
 /**
  * test case.

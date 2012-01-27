@@ -4,8 +4,8 @@ require_once 'PHPUnit/Framework/TestCase.php';
 require_once 'Zend/Queue.php';
 require_once 'Zend/Queue/Message/Iterator.php';
 require_once 'Zend/Queue/Message.php';
-require_once __DIR__ . '/../../../lib/fpMqAmazonQueue.php';
-require_once __DIR__ . '/../../../lib/fpMqFunction.php';
+require_once __DIR__ . '/../../../lib/fpMqAmazonQueue.class.php';
+require_once __DIR__ . '/../../../lib/fpMqFunction.class.php';
 
 /**
  * Amazon SQS test case.
