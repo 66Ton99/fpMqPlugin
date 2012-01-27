@@ -1,5 +1,5 @@
 <?php
-
+declare(ticks = 1);
 require_once __DIR__ . '/../lib/fpMqFunction.php';
 
 /**
@@ -10,7 +10,7 @@ class fpMqDaemon
 {
   protected $interval = 2;
   protected $callback;
-  protected $heandler;
+  protected $notifier;
   
   /**
    * Constructor
@@ -19,27 +19,16 @@ class fpMqDaemon
    */
   public function __construct($callback)
   {
-    $this->callback = $callback;
     $file = __DIR__ . '/../../fpErrorNotifierPlugin/config/include.php';
     if (is_readable($file))
     {
-      fpMqFunction::loadConfig('config/notify.yml', 'sf_notify', 1);
+      fpMqFunction::loadConfig('config/notify.yml', 'sf_notify');
       require_once $file;
-      $notifier = new fpErrorNotifier();
-      fpErrorNotifier::setInstance($notifier);
-      $this->heandler = $notifier->handler();
-      $this->heandler->initialize();
+      $this->notifier = new fpErrorNotifier();
+      fpErrorNotifier::setInstance($this->notifier);
+      $this->notifier->handler()->initialize();
     }
-  }
-  
-  /**
-   * Destructor
-   *
-   * @return void
-   */
-  public function __destruct()
-  {
-    throw new Exception('Demon is down');
+    $this->callback = $callback;
   }
   
   /**

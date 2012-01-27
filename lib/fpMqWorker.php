@@ -13,10 +13,32 @@ require_once 'Zend/Queue/Message.php';
 class fpMqWorker
 {
   
+  /**
+   * Daemon
+   * 
+   * @var fpMqDaemon
+   */
+  protected $daemon;
+  
+  /**
+   * Queue
+   * 
+   * @var Zend_Queue
+   */
   protected $queue;
   
+  /**
+   * Callback
+   * 
+   * @var callback
+   */
   protected $callback;
   
+  /**
+   * Lock time
+   * 
+   * @var int
+   */
   protected $lockTime = 10;
 
   /**
@@ -26,6 +48,7 @@ class fpMqWorker
    */
   public function __construct($callback)
   {
+    $this->daemon = new fpMqDaemon(array($this, 'process'));
     $this->callback = $callback;
     $options = sfConfig::get('fp_mq_driver_options');
     $driver = new fpMqAmazonQueue($options);
@@ -59,8 +82,7 @@ class fpMqWorker
    */
   public function run()
   {
-    $daemon = new fpMqDaemon(array($this, 'process'));
-    $daemon->run();
+    $this->daemon->run();
   }
   
   /**
