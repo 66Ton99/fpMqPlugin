@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../lib/fpMqFunction.php';
+
 /**
  * 
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
@@ -8,7 +10,7 @@ class fpMqDaemon
 {
   protected $interval = 2;
   protected $callback;
-
+  protected $heandler;
   
   /**
    * Constructor
@@ -18,7 +20,16 @@ class fpMqDaemon
   public function __construct($callback)
   {
     $this->callback = $callback;
-    register_shutdown_function(array($this, '__destruct'));
+    $file = __DIR__ . '/../../fpErrorNotifierPlugin/config/include.php';
+    if (is_readable($file))
+    {
+      fpMqFunction::loadConfig('config/notify.yml', 'sf_notify', 1);
+      require_once $file;
+      $notifier = new fpErrorNotifier();
+      fpErrorNotifier::setInstance($notifier);
+      $this->heandler = $notifier->handler();
+      $this->heandler->initialize();
+    }
   }
   
   /**
@@ -28,7 +39,7 @@ class fpMqDaemon
    */
   public function __destruct()
   {
-    
+    throw new Exception('Demon is down');
   }
   
   /**

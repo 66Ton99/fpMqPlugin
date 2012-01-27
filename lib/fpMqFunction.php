@@ -7,6 +7,27 @@ define('ROOTDIR', __DIR__ . '/../../..');
  */
 class fpMqFunction
 {
+  
+  /**
+   * Add vars of congs to system 
+   *
+   * @param string $sectionName
+   * @param array $configs
+   * @param int $levels
+   *
+   * @return void
+   */
+  protected static function registerConfigsToSystem($sectionName, $configs, $levels = 1)
+  {
+    $levels--;
+    foreach ($configs as $name => $value) {
+      if ($levels && is_array($value)) {
+        static::registerConfigsToSystem($sectionName . '_' . $name, $value, $levels);
+      } else {
+        sfConfig::set($sectionName . '_' . $name, $value);
+      }
+    }
+  }
 
   /**
    * Load configs
@@ -17,25 +38,20 @@ class fpMqFunction
    *
    * @return void
    */
-  public static function loadConfig($config)
+  public static function loadConfig($config, $sectionName = 'fp_mq', $levels = 1)
   {
-    require_once ROOTDIR . '/lib//vendor/symfony/lib/config/sfConfig.class.php';
+    require_once ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php';
     require_once ROOTDIR . '/lib/vendor/symfony/lib/yaml/sfYaml.php';
-    $mainConfig = sfYaml::load(__DIR__ . '/../' . $config);
-    $appConfig = sfYaml::load(ROOTDIR . '/' . $config);
-    if (is_array($appConfig))
+    $configs = array();
+    if (($mainConfig = sfYaml::load(__DIR__ . '/../' . $config)) && is_array($mainConfig))
     {
-      $configs = static::arrayMergeRecursive($mainConfig, $appConfig);
+      $configs = static::arrayMergeRecursive($configs, $mainConfig);
     }
-    else
+    if (($appConfig = sfYaml::load(ROOTDIR . '/' . $config)) && is_array($appConfig))
     {
-      $configs = $mainConfig;
+      $configs = static::arrayMergeRecursive($configs, $appConfig);
     }
-    $configs = $configs['all'];
-    foreach ($configs as $key => $val)
-    {
-      sfConfig::set('fp_mq_' . $key, $val);
-    }
+    static::registerConfigsToSystem($sectionName, $configs['all'], $levels);
   }
   
   /**
