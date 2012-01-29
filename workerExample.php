@@ -1,9 +1,9 @@
 <?php
 
-require_once __DIR__ . '/lib/fpMqFunction.class.php';
-require_once __DIR__ . '/lib/fpMqWorker.class.php';
+// Run in background:
+// nohup php workerExample.php > /dev/null &
 
-fpMqFunction::loadConfig('config/fp_mq.yml');
+require_once __DIR__ . '/workerBase.php';
 
 /**
  * Call service

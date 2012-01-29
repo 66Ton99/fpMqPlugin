@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/fpMqFunction.class.php';
 
 /**
  * 
@@ -10,6 +9,8 @@ class fpMqDaemon
   protected $interval = 2;
   protected $callback;
   protected $notifier;
+
+  protected $pidFile = 'data/worker.pid';
   
   /**
    * Constructor
@@ -18,16 +19,53 @@ class fpMqDaemon
    */
   public function __construct($callback)
   {
-    $file = __DIR__ . '/../../fpErrorNotifierPlugin/config/include.php';
-    if (is_readable($file))
+    $this->pidFile = __DIR__ . '/../' . $this->pidFile;
+    switch (strtolower(@$_SERVER['argv'][1]))
     {
-      fpMqFunction::loadConfig('config/notify.yml', 'sf_notify');
-      require_once $file;
-      $this->notifier = new fpErrorNotifier();
-      fpErrorNotifier::setInstance($this->notifier);
-      $this->notifier->handler()->initialize();
+      case 'stop':
+        $this->stop();
+
+      case 'start':
+      default:
+        $this->start();
     }
     $this->callback = $callback;
+  }
+
+  public function getPid()
+  {
+    $pid = null;
+    if (is_file($this->pidFile))
+    {
+      $pid = file_get_contents($this->pidFile);
+    }
+    return $pid;
+  }
+
+  public function start()
+  {
+    if(posix_kill($this->getPid(), 0))
+    {
+      echo 'It is already running', "\n";
+      exit(0);
+    }
+    $pid = getmypid();
+    unlink($this->pidFile);
+    file_put_contents($this->pidFile, $pid, FILE_APPEND);
+  }
+
+  public function stop()
+  {
+    $pid = $this->getPid();
+    if(!posix_kill($pid, 0))
+    {
+      echo 'It is already stopped', "\n";
+    }
+    elseif (!posix_kill($pid, SIGKILL))
+    {
+      echo 'Can not stop process ', $pid, "\n";
+    }
+    exit(0);
   }
   
   /**
@@ -41,6 +79,7 @@ class fpMqDaemon
     while (true) {
       call_user_func($this->callback);
       sleep($this->interval);
+//      echo '.';
     }
   }
 }
