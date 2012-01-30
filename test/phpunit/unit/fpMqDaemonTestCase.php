@@ -5,8 +5,10 @@ require_once __DIR__ . '/../../../lib/fpMqDaemon.class.php';
 
 /**
  * test case.
+ * 
+ * @todo write tests
  */
-class fpMqDaemonTestCase extends PHPUnit_Framework_TestCase
+class fpMqDaemonTestCase //extends PHPUnit_Framework_TestCase
 {
   
   private $iterator = 0;

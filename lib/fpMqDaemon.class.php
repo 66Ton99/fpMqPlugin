@@ -23,11 +23,15 @@ class fpMqDaemon
     switch (strtolower(@$_SERVER['argv'][1]))
     {
       case 'stop':
-        $this->stop();
+        echo $this->stop(), "\n";
+        exit;
 
       case 'start':
       default:
-        $this->start();
+        if (false === $this->start()) {
+          echo 'It is already running', "\n";
+          exit;
+        }
     }
     $this->callback = $callback;
   }
@@ -44,14 +48,14 @@ class fpMqDaemon
 
   public function start()
   {
-    if(posix_kill($this->getPid(), 0))
+    if(($pid = $this->getPid()) && posix_kill($pid, 0))
     {
-      echo 'It is already running', "\n";
-      exit(0);
+      return false;
     }
     $pid = getmypid();
     unlink($this->pidFile);
     file_put_contents($this->pidFile, $pid, FILE_APPEND);
+    return true;
   }
 
   public function stop()
@@ -59,13 +63,13 @@ class fpMqDaemon
     $pid = $this->getPid();
     if(!posix_kill($pid, 0))
     {
-      echo 'It is already stopped', "\n";
+      return 'It is already stopped';
     }
     elseif (!posix_kill($pid, SIGKILL))
     {
-      echo 'Can not stop process ', $pid, "\n";
+      return 'Can not stop process ' . $pid;
     }
-    exit(0);
+    return 'Stoped';
   }
   
   /**

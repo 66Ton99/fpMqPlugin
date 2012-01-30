@@ -47,7 +47,6 @@ class fpMqWorker
   {
     $this->daemon = new fpMqDaemon(array($this, 'process'));
     $this->callback = $callback;
-    $options = sfConfig::get('fp_mq_driver_options');
     $this->queue = fpMqQueue::getInstance();
   }
   
@@ -66,7 +65,7 @@ class fpMqWorker
       {
         $tmp = explode('/', $queue);
         $queueName = array_pop($tmp);
-        $this->createFork($message, $queueName);
+        static::createFork(array($message, $queueName), array($this, 'execute'));
       }
     }
   }
@@ -82,11 +81,32 @@ class fpMqWorker
   }
   
   /**
-   * Creates separate process
+   * Executes external callback (gets message) and deletes the message
    *
-   * @return bool
+   * @param Zend_Queue_Message $message
+   * @param string $queueName
+   *
+   * @return void
    */
-  public function createFork($message, $queueName)
+  public function execute($message, $queueName)
+  {
+    if (call_user_func($this->callback, json_decode($message->body), $queueName))
+    {
+      $this->queue->deleteMessage($message);
+    }
+  }
+  
+  /**
+   * Creates separate process (fork)
+   *
+   * @param array $params
+   * @param callback $callback
+   * 
+   * @throws Exception
+   * 
+   * @return boolean
+   */
+  public static function createFork($params, $callback)
   {
     switch ($pid = pcntl_fork()) {
       case -1:
@@ -94,10 +114,7 @@ class fpMqWorker
         break;
   
       case 0:
-        if (call_user_func($this->callback, json_decode($message->body), $queueName))
-        {
-          $this->queue->deleteMessage($message);
-        }
+        call_user_func_array($callback, $params);
         exit; // The end of the forked process
   
       default:
