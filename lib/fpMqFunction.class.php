@@ -2,14 +2,14 @@
 define('ROOTDIR', __DIR__ . '/../../..');
 
 /**
- * 
+ *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqFunction
 {
-  
+
   /**
-   * Add vars of congs to system 
+   * Add vars of congs to system
    *
    * @param string $sectionName
    * @param array $configs
@@ -33,7 +33,7 @@ class fpMqFunction
    * Load configs
    *
    * @param string $config
-   * 
+   *
    * @todo improve
    *
    * @return void
@@ -53,15 +53,18 @@ class fpMqFunction
     }
     static::registerConfigsToSystem($sectionName, $configs['all'], $levels);
   }
-  
+
   /**
    * Recursive merge 2 or more arrays
+   *
+   * @param array $arr1
+   * @param array $arr2
    *
    * @return array
    */
   public static function arrayMergeRecursive()
   {
-  
+
     if (func_num_args() < 2) {
       trigger_error(__FUNCTION__ . ' needs two or more array arguments', E_USER_WARNING);
       return;
