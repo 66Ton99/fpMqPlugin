@@ -4,36 +4,36 @@ require_once __DIR__ . '/fpMqDaemon.class.php';
 require_once __DIR__ . '/fpMqQueue.class.php';
 
 /**
- * 
+ *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqWorker
 {
-  
+
   /**
    * Daemon
-   * 
+   *
    * @var fpMqDaemon
    */
   protected $daemon;
-  
+
   /**
    * Queue
-   * 
+   *
    * @var fpMqQueue
    */
   protected $queue;
-  
+
   /**
    * Callback
-   * 
+   *
    * @var callback
    */
   protected $callback;
-  
+
   /**
    * Lock time
-   * 
+   *
    * @var int
    */
   protected $lockTime = 10;
@@ -43,15 +43,20 @@ class fpMqWorker
    *
    * @return void
    */
-  public function __construct($callback)
+  public function __construct($callback, $queue = null)
   {
+    if (null === $queue)
+    {
+      $queue = fpMqQueue::getInstance();
+    }
+    $this->queue = $queue;
     $this->daemon = new fpMqDaemon(array($this, 'process'));
     $this->callback = $callback;
-    $this->queue = fpMqQueue::getInstance();
+
   }
-  
+
   /**
-   * 
+   *
    *
    * @return void
    */
@@ -69,7 +74,7 @@ class fpMqWorker
       }
     }
   }
-  
+
   /**
    * Run daemon process
    *
@@ -79,7 +84,7 @@ class fpMqWorker
   {
     $this->daemon->run();
   }
-  
+
   /**
    * Executes external callback (gets message) and deletes the message
    *
@@ -95,15 +100,15 @@ class fpMqWorker
       $this->queue->deleteMessage($message);
     }
   }
-  
+
   /**
    * Creates separate process (fork)
    *
    * @param array $params
    * @param callback $callback
-   * 
+   *
    * @throws Exception
-   * 
+   *
    * @return boolean
    */
   public static function createFork($params, $callback)
@@ -112,11 +117,11 @@ class fpMqWorker
       case -1:
         throw new Exception('Fork failed');
         break;
-  
+
       case 0:
         call_user_func_array($callback, $params);
         exit; // The end of the forked process
-  
+
       default:
         pcntl_wait($status, WNOHANG); //Protects against Zombie children
         break;
