@@ -15,6 +15,11 @@ class fpMqQueue
   protected static $instance;
 
   /**
+   * @var array
+   */
+  protected $queuesList = null;
+
+  /**
    * @var Zend_Queue
    */
   protected $zendQueue;
@@ -32,7 +37,28 @@ class fpMqQueue
   protected function __construct(array $options, $amazonUrl)
   {
     $this->amazonUrl = $amazonUrl;
-    $this->zendQueue = $this->queueFacrtory($this->driverFactory($options));
+    $this->zendQueue = $this->queueFactory($this->driverFactory($options));
+  }
+
+
+  /**
+   * Magic method
+   *
+   * @param string $method
+   * @param array $params
+   *
+   * @throws sfException
+   *
+   * @return mixed
+   */
+  public function __call($method, $params)
+  {
+    if (!method_exists($this->zendQueue, $method)) {
+      require_once __DIR__ . '/fpMqException.class.php';
+      throw new fpMqException("Called '{$method}' method does not exist in " . get_class($this));
+    }
+    $return = call_user_func_array(array($this->zendQueue, $method), $params);
+    return $return;
   }
 
   /**
@@ -42,7 +68,7 @@ class fpMqQueue
    *
    * @return Zend_Queue
    */
-  protected function queueFacrtory(Zend_Queue_Adapter_AdapterAbstract $driver)
+  protected function queueFactory(Zend_Queue_Adapter_AdapterAbstract $driver)
   {
     return new Zend_Queue($driver);
   }
@@ -80,6 +106,7 @@ class fpMqQueue
   public static function getInstance()
   {
     if (empty(static::$instance)) {
+      require_once __DIR__ . '/fpMqException.class.php';
       throw new fpMqException('You must call init first');
     }
     return static::$instance;
@@ -100,29 +127,33 @@ class fpMqQueue
   }
 
   /**
-   * Decorated object
+   * @see fpMqAmazonQueue::getQueues()
    *
-   * @var object
+   * @param bool $refresh
+   * @param string $queuePrefix
+   *
+   * @return array
    */
-  protected $object = null;
-
-  /**
-   * Magic method
-   *
-   * @param string $method
-   * @param array $params
-   *
-   * @throws sfException
-   *
-   * @return mixed
-   */
-  public function __call($method, $params)
+  public function getQueues($refresh = false, $queuePrefix = null)
   {
-    if (!method_exists($this->zendQueue, $method)) {
-      throw new fpMqException("Called '{$method}' method does not exist in " . get_class($this));
-    }
-    $return = call_user_func_array(array($this->zendQueue, $method), $params);
-    return $return;
+     if (null === $this->queuesList) {
+        $refrash = true;
+     }
+     if ($refrash) {
+        return $this->queuesList;
+     }
+     $this->queuesList = $this->zendQueue->getQueues();
+     if (null === $queuePrefix) {
+        $queuePrefix = $this->zendQueue->getOption('queuePrefix');
+     }
+     if ($queuePrefix) {
+        foreach ($this->queuesList as $key => $queueName) {
+           if ($queuePrefix != substr($queueName, 0, strlen($queuePrefix))) {
+              unset($this->queuesList[$key]);
+           }
+        }
+     }
+     return $this->queuesList;
   }
 
 }

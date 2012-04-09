@@ -1,14 +1,28 @@
 <?php
 
 /**
+ * Amazon SQS Queue
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
 {
 
+  /**
+   * Default timeout for create() function
+   */
+  const CREATE_TIMEOUT_DEFAULT = 30;
+
+  /**
+   * @var Zend_Service_Amazon_Sqs
+   */
   protected $service;
 
+  /**
+   * Amazon conection url
+   *
+   * @var string
+   */
   protected $queueUrl;
 
   /**
@@ -19,7 +33,8 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     if (empty($options['id']) || empty($options['key']))
     {
-      throw new fpMqException('Options: "id" and "key" are required');
+      require_once 'Zend/Queue/Exception.php';
+      throw new Zend_Queue_Exception('Options: "id" and "key" are required');
     }
     $this->service = new Zend_Service_Amazon_Sqs($options['id'], $options['key']);
     parent::__construct($options, $queue);
@@ -31,6 +46,9 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function create($name, $timeout = null)
   {
+    if (null === $timeout) {
+      $timeout = self::CREATE_TIMEOUT_DEFAULT;
+    }
     return $this->service->create($name, $timeout);
   }
 
@@ -49,7 +67,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function deleteMessage(Zend_Queue_Message $message)
   {
-    return $this->service->deleteMessage($this->getQueueUrl(), $message->handle);
+    return $this->service->deleteMessage($this->getQueueUrl(), $message->handlqe);
   }
 
   /**
@@ -84,7 +102,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function send($message, Zend_Queue $queue = null)
   {
-  if (null !== $queue) {
+    if (null !== $queue) {
       $this->setQueue($queue);
     }
     return $this->service->send($this->getQueueUrl(), $message);
@@ -96,7 +114,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function count(Zend_Queue $queue = null)
   {
-  if (null !== $queue) {
+    if (null !== $queue) {
       $this->setQueue($queue);
     }
     return $this->service->count($this->getQueueUrl());
@@ -108,7 +126,10 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function isExists($name)
   {
-    return $this->isExists($name);
+    if (in_array($name, $this->service->getQueues())) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -136,6 +157,11 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   protected function getQueueUrl()
   {
+    if (!$this->getQueue()->hasOption('queueUrl'))
+    {
+      require_once 'Zend/Queue/Exception.php';
+      throw new Zend_Queue_Exception('"queueUrl" option must be specified before use');
+    }
     return $this->getQueue()->getOption('queueUrl');
   }
 }
