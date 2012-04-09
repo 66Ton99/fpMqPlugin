@@ -1,1 +1,3 @@
 MQ wrapper for Zend Queue
+
+It can be used without Symfony
