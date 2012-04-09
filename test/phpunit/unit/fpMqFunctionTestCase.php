@@ -14,6 +14,10 @@ class fpMqFunctionTestCase extends PHPUnit_Framework_TestCase
    */
   public function initConfigs()
   {
+    if (!is_file(ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php'))
+    {
+       $this->markTestSkipped('It will work only in Symfony 1.? environment');
+    }
     fpMqFunction::loadConfig('config/fp_mq.yml');
     $this->assertEquals('test', sfConfig::get('fp_mq_test'));
   }
@@ -58,7 +62,7 @@ class fpMqFunctionTestCase extends PHPUnit_Framework_TestCase
         ),
     );
   }
-  
+
   /**
    * @test
    * @dataProvider arrays

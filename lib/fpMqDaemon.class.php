@@ -1,7 +1,7 @@
 <?php
 
 /**
- * 
+ *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqDaemon
@@ -10,8 +10,24 @@ class fpMqDaemon
   protected $callback;
   protected $notifier;
 
-  protected $pidFile = 'data/worker.pid';
-  
+  protected $pidFile = 'worker.pid';
+
+
+  /**
+   * Returns tmp dir
+   *
+   * @return string
+   */
+  public function getTmpDir()
+  {
+    $tmpDir = __DIR__ . '/../data/';
+    if (!is_writable($tmpDir)) {
+      trigger_error("Directory '{$tmpDir}' does not have write permission, system tmp dir will be used", E_WARNING);
+      $tmpDir = sys_get_temp_dir();
+    }
+    return $tmpDir;
+  }
+
   /**
    * Constructor
    *
@@ -19,7 +35,7 @@ class fpMqDaemon
    */
   public function __construct($callback)
   {
-    $this->pidFile = __DIR__ . '/../' . $this->pidFile;
+    $this->pidFile = $this->getTmpDir() . $this->pidFile;
     switch (strtolower(@$_SERVER['argv'][1]))
     {
       case 'stop':
@@ -48,12 +64,12 @@ class fpMqDaemon
 
   public function start()
   {
-    if(($pid = $this->getPid()) && posix_kill($pid, 0))
+    if(($pid = $this->getPid()) && posix_kill($pid, SIG_DFL))
     {
       return false;
     }
     $pid = getmypid();
-    unlink($this->pidFile);
+    @unlink($this->pidFile);
     file_put_contents($this->pidFile, $pid, FILE_APPEND);
     return true;
   }
@@ -61,7 +77,7 @@ class fpMqDaemon
   public function stop()
   {
     $pid = $this->getPid();
-    if(!posix_kill($pid, 0))
+    if(!posix_kill($pid, SIG_DFL))
     {
       return 'It is already stopped';
     }
@@ -71,7 +87,7 @@ class fpMqDaemon
     }
     return 'Stoped';
   }
-  
+
   /**
    * Run
    *

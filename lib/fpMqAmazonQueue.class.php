@@ -1,17 +1,14 @@
 <?php
 
-require_once 'Zend/Queue/Adapter/AdapterAbstract.php';
-require_once 'Zend/Service/Amazon/Sqs.php';
-
 /**
- * 
+ *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
 {
-  
+
   protected $service;
-  
+
   protected $queueUrl;
 
   /**
@@ -20,10 +17,14 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function __construct($options, Zend_Queue $queue = null)
   {
+    if (empty($options['id']) || empty($options['key']))
+    {
+      throw new fpMqException('Options: "id" and "key" are required');
+    }
     $this->service = new Zend_Service_Amazon_Sqs($options['id'], $options['key']);
     parent::__construct($options, $queue);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::create()
@@ -32,7 +33,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     return $this->service->create($name, $timeout);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::delete()
@@ -41,7 +42,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     return $this->service->delete($name);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::deleteMessage()
@@ -50,7 +51,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     return $this->service->deleteMessage($this->getQueueUrl(), $message->handle);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::getQueues()
@@ -59,7 +60,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     return $this->service->getQueues();
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::receive()
@@ -76,7 +77,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
       'data' => $responseArr
     ));
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::send()
@@ -88,7 +89,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
     }
     return $this->service->send($this->getQueueUrl(), $message);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::count()
@@ -100,7 +101,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
     }
     return $this->service->count($this->getQueueUrl());
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::isExists()
@@ -109,7 +110,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   {
     return $this->isExists($name);
   }
-  
+
   /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::getCapabilities()
@@ -127,7 +128,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
       'isExists'      => true,
     );
   }
-  
+
   /**
    * Get queue url
    *

@@ -20,5 +20,8 @@ function callService($message, $queueName)
   return true;
 }
 
-$worker = new fpMqWorker('callService');
+fpMqFunction::loadConfig('config/fp_mq.yml');
+$options = sfConfig::get('fp_mq_driver_options');
+
+$worker = new fpMqWorker('callService', fpMqQueue::init($options, sfConfig::get('fp_mq_amazon_url')));
 $worker->run();

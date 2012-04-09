@@ -5,20 +5,24 @@ require_once __DIR__ . '/../../../lib/fpMqDaemon.class.php';
 
 /**
  * test case.
- * 
+ *
  * @todo write tests
  */
-class fpMqDaemonTestCase //extends PHPUnit_Framework_TestCase
+class fpMqDaemonTestCase extends PHPUnit_Framework_TestCase
 {
-  
+
   private $iterator = 0;
+
+  private $daemon;
 
   public function callback()
   {
-    if (2 <= $this->iterator) throw new ErrorException('OK');
+    if (2 <= $this->iterator) {
+      throw new ErrorException('OK');
+    }
     $this->iterator++;
   }
-  
+
   /**
    * @test
    * @expectedException ErrorException
@@ -26,9 +30,8 @@ class fpMqDaemonTestCase //extends PHPUnit_Framework_TestCase
    */
   public function testRun()
   {
-    $daemon = new fpMqDaemon(array($this, 'callback'));
-    $daemon->run();
+    $this->daemon = new fpMqDaemon(array($this, 'callback'));
+    $this->daemon->run();
   }
-
 }
 

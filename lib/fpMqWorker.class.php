@@ -1,8 +1,5 @@
 <?php
 
-require_once __DIR__ . '/fpMqDaemon.class.php';
-require_once __DIR__ . '/fpMqQueue.class.php';
-
 /**
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
@@ -43,16 +40,11 @@ class fpMqWorker
    *
    * @return void
    */
-  public function __construct($callback, $queue = null)
+  public function __construct($callback, fpMqQueue $queue)
   {
-    if (null === $queue)
-    {
-      $queue = fpMqQueue::getInstance();
-    }
     $this->queue = $queue;
-    $this->daemon = new fpMqDaemon(array($this, 'process'));
     $this->callback = $callback;
-
+    $this->daemon = $this->deamonFactory();
   }
 
   /**
@@ -73,6 +65,16 @@ class fpMqWorker
         static::createFork(array($message, $queueName), array($this, 'execute'));
       }
     }
+  }
+
+  /**
+   * Init deamon
+   *
+   * @return fpMqDaemon
+   */
+  protected function deamonFactory()
+  {
+    return new fpMqDaemon(array($this, 'process'));
   }
 
   /**

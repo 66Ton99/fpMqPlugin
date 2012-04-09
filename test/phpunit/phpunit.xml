@@ -10,5 +10,8 @@
        <testsuite name="unit">
          <directory suffix="TestCase.php">unit</directory>
        </testsuite>
+       <testsuite name="functional">
+         <directory suffix="TestCase.php">functional</directory>
+       </testsuite>
     </testsuites>
 </phpunit>

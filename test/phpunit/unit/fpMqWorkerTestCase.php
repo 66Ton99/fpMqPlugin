@@ -1,17 +1,13 @@
 <?php
 
 require_once 'PHPUnit/Framework/TestCase.php';
-require_once __DIR__ . '/../../../lib/fpMqWorker.class.php';
-require_once __DIR__ . '/../../../lib/fpMqFunction.class.php';
+require_once __DIR__ . '/../../../lib/autoload.php';
 
 /**
- * test case.
- * @todo implement
+ * Test case of worker.
  */
-class fpMqWorkerTestCase //extends PHPUnit_Framework_TestCase
+class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
 {
-
-
 
   const MESSAGE = 'test';
   const QUEUENAME = 'testQueue';
@@ -28,9 +24,7 @@ class fpMqWorkerTestCase //extends PHPUnit_Framework_TestCase
    */
   public function createFork()
   {
-    fpMqFunction::loadConfig('config/fp_mq.yml');
-    $worker = new fpMqWorker(array($this, 'callback'));
-    $worker->createFork(static::MESSAGE, static::QUEUENAME);
+    fpMqWorker::createFork(array(static::MESSAGE, static::QUEUENAME), array($this, 'callback'));
   }
 
   /**
