@@ -136,6 +136,7 @@ class fpMqQueue
    */
   public function getQueues($refresh = false, $prefix = null)
   {
+
      if (null === $this->queuesList) {
         $refresh = true;
      }
@@ -145,6 +146,7 @@ class fpMqQueue
      $this->queuesList = $this->zendQueue->getQueues();
      if ($prefix) {
         foreach ($this->queuesList as $key => $queueName) {
+           $queueName = substr(strrchr($queueName, '/'), 1);
            if ($prefix . '_' != substr($queueName, 0, strlen($prefix) + 1)) {
               unset($this->queuesList[$key]);
            }

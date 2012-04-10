@@ -67,7 +67,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function deleteMessage(Zend_Queue_Message $message)
   {
-    return $this->service->deleteMessage($this->getQueueUrl(), $message->handlqe);
+    return $this->service->deleteMessage($this->getQueueUrl(), $message->handle);
   }
 
   /**

@@ -95,11 +95,15 @@ class fpMqDaemon
    */
   public function run()
   {
-//     echo "\n", 'Start daemon ', date('Y-m-d H:i:s'), "\n";
+    if (defined('DEBUG')) {
+      echo "\n", 'Start daemon ', date('Y-m-d H:i:s'), "\n";
+    }
     while (true) {
       call_user_func($this->callback);
       sleep($this->interval);
-//      echo '.';
+      if (defined('DEBUG')) {
+        echo '.';
+      }
     }
   }
 }
