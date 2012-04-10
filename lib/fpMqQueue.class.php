@@ -130,25 +130,22 @@ class fpMqQueue
    * @see fpMqAmazonQueue::getQueues()
    *
    * @param bool $refresh
-   * @param string $queuePrefix
+   * @param string $prefix
    *
    * @return array
    */
-  public function getQueues($refresh = false, $queuePrefix = null)
+  public function getQueues($refresh = false, $prefix = null)
   {
      if (null === $this->queuesList) {
         $refrash = true;
      }
-     if ($refrash) {
+     if (!$refrash) {
         return $this->queuesList;
      }
      $this->queuesList = $this->zendQueue->getQueues();
-     if (null === $queuePrefix) {
-        $queuePrefix = $this->zendQueue->getOption('queuePrefix');
-     }
-     if ($queuePrefix) {
+     if ($prefix) {
         foreach ($this->queuesList as $key => $queueName) {
-           if ($queuePrefix != substr($queueName, 0, strlen($queuePrefix))) {
+           if ($prefix . '_' != substr($queueName, 0, strlen($prefix) + 1)) {
               unset($this->queuesList[$key]);
            }
         }

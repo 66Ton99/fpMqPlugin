@@ -36,12 +36,18 @@ class fpMqWorker
   protected $lockTime = 10;
 
   /**
+   * @var string
+   */
+  protected $prefix;
+
+  /**
    * Constructor
    *
    * @return void
    */
-  public function __construct($callback, fpMqQueue $queue)
+  public function __construct($callback, fpMqQueue $queue, $prefix = null)
   {
+    $this->prefix = $prefix;
     $this->queue = $queue;
     $this->callback = $callback;
     $this->daemon = $this->deamonFactory();
@@ -54,14 +60,16 @@ class fpMqWorker
    */
   public function process()
   {
-    foreach ($this->queue->getQueues() as $queue)
+    foreach ($this->queue->getQueues(false, $this->prefix) as $queue)
     {
       $this->queue->setOption('queueUrl', $queue);
       $messages = $this->queue->receive(1, $this->lockTime);
-      if (count($messages) && $message = $messages->current())
-      {
+      if (count($messages) && $message = $messages->current()) {
         $tmp = explode('/', $queue);
         $queueName = array_pop($tmp);
+        if ($this->prefix) {
+           $queueName = substr($queueName, strlen($this->prefix) + 1);
+        }
         static::createFork(array($message, $queueName), array($this, 'execute'));
       }
     }
@@ -97,8 +105,7 @@ class fpMqWorker
    */
   public function execute($message, $queueName)
   {
-    if (call_user_func($this->callback, json_decode($message->body), $queueName))
-    {
+    if (call_user_func($this->callback, json_decode($message->body), $queueName)) {
       $this->queue->deleteMessage($message);
     }
   }
