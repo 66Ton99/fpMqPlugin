@@ -137,9 +137,9 @@ class fpMqQueue
   public function getQueues($refresh = false, $prefix = null)
   {
      if (null === $this->queuesList) {
-        $refrash = true;
+        $refresh = true;
      }
-     if (!$refrash) {
+     if (!$refresh) {
         return $this->queuesList;
      }
      $this->queuesList = $this->zendQueue->getQueues();
