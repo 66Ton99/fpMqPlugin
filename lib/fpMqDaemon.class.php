@@ -96,7 +96,7 @@ class fpMqDaemon
   public function run()
   {
     if (defined('DEBUG')) {
-      echo "\n", 'Start daemon ', date('Y-m-d H:i:s'), "\n";
+      echo "\n", 'Daemon was started at ', date('Y-m-d H:i:s'), "\n";
     }
     while (true) {
       call_user_func($this->callback);

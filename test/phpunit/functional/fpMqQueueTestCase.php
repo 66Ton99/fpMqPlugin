@@ -1,7 +1,7 @@
 <?php
 
 require_once 'PHPUnit/Framework/TestCase.php';
-require_once __DIR__ . '/../../../lib/autoload.php';
+require_once __DIR__ . '/../../../autoload.php';
 
 /**
  * Amazon SQS test case.
@@ -27,8 +27,10 @@ class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
    */
   public function connect()
   {
-    $this->markTestIncomplete('Find the way get configuration');
-    static::$service = fpMqQueue::init(array('id' => '', 'key' => ''), '');
+    if (!fpMqQueue::sfInit()) {
+      $this->markTestIncomplete('Now test works only in Symfony environment');
+    }
+    static::$service = fpMqQueue::getInstance();
     $this->assertNotNull(static::$service);
   }
 
@@ -72,6 +74,18 @@ class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
   {
     $messageHandle = $this->resive();
     $this->assertTrue(static::$service->deleteMessage($messageHandle));
+  }
+
+  /**
+   * @test
+   * @depends resive
+   *
+   * @expectedException PHPUnit_Framework_AssertionFailedError
+   * @expectedExceptionMessage Message does not resived
+   */
+  public function resive_isDeleted()
+  {
+    $messageHandle = $this->resive();
   }
 
 }

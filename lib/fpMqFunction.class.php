@@ -36,11 +36,13 @@ class fpMqFunction
    *
    * @todo improve
    *
-   * @return void
+   * @return bool
    */
   public static function loadConfig($config, $sectionName = 'fp_mq', $levels = 1)
   {
-    require_once ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php';
+    $file = ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php';
+    if (!is_readable($file)) return false;
+    require_once $file;
     require_once ROOTDIR . '/lib/vendor/symfony/lib/yaml/sfYaml.php';
     $configs = array();
     if (($mainConfig = sfYaml::load(__DIR__ . '/../' . $config)) && is_array($mainConfig))
@@ -52,6 +54,7 @@ class fpMqFunction
       $configs = static::arrayMergeRecursive($configs, $appConfig);
     }
     static::registerConfigsToSystem($sectionName, $configs['all'], $levels);
+    return true;
   }
 
   /**

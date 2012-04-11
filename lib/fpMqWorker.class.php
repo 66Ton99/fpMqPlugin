@@ -60,8 +60,7 @@ class fpMqWorker
    */
   public function process()
   {
-    foreach ($this->queue->getQueues(false, $this->prefix) as $queue)
-    {
+    foreach ($this->queue->getQueues(false, $this->prefix) as $queue) {
       $this->queue->setOption('queueUrl', $queue);
       $messages = $this->queue->receive(1, $this->lockTime);
       if (count($messages) && $message = $messages->current()) {
@@ -107,6 +106,9 @@ class fpMqWorker
   {
     if (call_user_func($this->callback, json_decode($message->body), $queueName)) {
       $this->queue->deleteMessage($message);
+      if (defined('DEBUG')) {
+          echo "Deleted\n";
+      }
     }
   }
 
@@ -116,16 +118,13 @@ class fpMqWorker
    * @param array $params
    * @param callback $callback
    *
-   * @throws Exception
-   *
    * @return boolean
    */
   public static function createFork($params, $callback)
   {
     switch ($pid = pcntl_fork()) {
-      case -1:
-        throw new Exception('Fork failed');
-        break;
+      case -1: // Fail
+        return false;
 
       case 0:
         call_user_func_array($callback, $params);
@@ -135,6 +134,6 @@ class fpMqWorker
         pcntl_wait($status, WNOHANG); //Protects against Zombie children
         break;
     }
-    return false;
+    return true;
   }
 }

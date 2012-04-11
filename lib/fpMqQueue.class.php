@@ -99,15 +99,30 @@ class fpMqQueue
   }
 
   /**
+   * Initialization for symfony
+   *
+   * @param array $options
+   * @param strings $amazonUrl
+   *
+   * @return void
+   */
+  public static function sfInit()
+  {
+    if (!fpMqFunction::loadConfig('config/fp_mq.yml')) return false;
+    static::$instance = new static(sfConfig::get('fp_mq_driver_options'), sfConfig::get('fp_mq_amazon_url'));
+    return true;
+  }
+
+  /**
    * Return singleton
    *
    * @return Queue
    */
   public static function getInstance()
   {
-    if (empty(static::$instance)) {
+    if (empty(static::$instance) && !static::sfInit()) {
       require_once __DIR__ . '/fpMqException.class.php';
-      throw new fpMqException('You must call init first');
+      throw new fpMqException('You must initialize it at first');
     }
     return static::$instance;
   }

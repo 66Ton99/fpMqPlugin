@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/lib/autoload.php';
+require_once __DIR__ . '/autoload.php';
 fpMqFunction::loadConfig('config/fp_mq.yml');
 sfConfig::set('sf_symfony_lib_dir', ROOTDIR . '/lib/vendor/symfony/lib');
 $file = __DIR__ . '/../fpErrorNotifierPlugin/config/include.php';
@@ -12,5 +12,3 @@ if (is_readable($file))
   fpErrorNotifier::setInstance($notifier);
   $notifier->handler()->initialize();
 }
-
-require_once __DIR__ . '/lib/fpMqWorker.class.php';
