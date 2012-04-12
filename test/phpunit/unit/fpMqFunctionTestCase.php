@@ -8,20 +8,6 @@ require_once __DIR__ . '/../../../lib/fpMqFunction.class.php';
  */
 class fpMqFunctionTestCase extends PHPUnit_Framework_TestCase
 {
-
-  /**
-   * @test
-   */
-  public function initConfigs()
-  {
-    if (!is_file(ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php'))
-    {
-       $this->markTestSkipped('It will work only in Symfony 1.? environment');
-    }
-    fpMqFunction::loadConfig('config/fp_mq.yml');
-    $this->assertEquals('test', sfConfig::get('fp_mq_test'));
-  }
-
   /**
    * Data for arrayMergeRecursive
    *

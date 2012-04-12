@@ -1,8 +1,13 @@
 all:
   amazon_sqs_test_queue: '' #TODO fill optional. It is required for tests
-  test: 'test' # don't chage
+  test:
+    test: 'test' # don't chage
   driver: 'fpMqAmazonQueue'
   amazon_url: '' #TODO fill
   driver_options:
     id: '' #TODO fill
     key: '' #TODO fill
+    prefix: ''
+test:
+  test:
+    test: 'test2' # don't chage

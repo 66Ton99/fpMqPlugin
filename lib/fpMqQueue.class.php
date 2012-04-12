@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Decorator for Zend_Queue
+ * Decorator-Wrapper for Zend_Queue
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
@@ -30,14 +30,34 @@ class fpMqQueue
   protected $amazonUrl;
 
   /**
+   * @var string
+   */
+  protected $queueNamePrefix;
+
+  protected $sender;
+
+  /**
    * Constructor
    *
    * @return void
    */
-  protected function __construct(array $options, $amazonUrl)
+  protected function __construct(array $options, $amazonUrl, $queueNamePrefix = null)
   {
+    if (!empty($options['sender'])) {
+      $this->sender = $options['sender'];
+    }
+    $this->queueNamePrefix = $queueNamePrefix;
     $this->amazonUrl = $amazonUrl;
     $this->zendQueue = $this->queueFactory($this->driverFactory($options));
+  }
+
+  /**
+   *
+   * @return Zend_Queue
+   */
+  public function getQueue()
+  {
+    return $this->zendQueue;
   }
 
 
@@ -53,11 +73,11 @@ class fpMqQueue
    */
   public function __call($method, $params)
   {
-    if (!method_exists($this->zendQueue, $method)) {
+    if (!method_exists($this->getQueue(), $method)) {
       require_once __DIR__ . '/fpMqException.class.php';
       throw new fpMqException("Called '{$method}' method does not exist in " . get_class($this));
     }
-    $return = call_user_func_array(array($this->zendQueue, $method), $params);
+    $return = call_user_func_array(array($this->getQueue(), $method), $params);
     return $return;
   }
 
@@ -109,7 +129,10 @@ class fpMqQueue
   public static function sfInit()
   {
     if (!fpMqFunction::loadConfig('config/fp_mq.yml')) return false;
-    static::$instance = new static(sfConfig::get('fp_mq_driver_options'), sfConfig::get('fp_mq_amazon_url'));
+    static::$instance = new static(
+      sfConfig::get('fp_mq_driver_options'),
+      sfConfig::get('fp_mq_amazon_url')
+    );
     return true;
   }
 
@@ -127,6 +150,15 @@ class fpMqQueue
     return static::$instance;
   }
 
+  protected function nomalizeQueueName($name)
+  {
+    $options = $this->getQueue()->getAdapter()->getOptions();
+    if (!empty($options['prefix'])) {
+      $name = $options['prefix'] . '_' . $name;
+    }
+    return $name;
+  }
+
   /**
    *
    *
@@ -134,11 +166,38 @@ class fpMqQueue
    *
    * @return fpMqQueue
    */
-  public function send($data, $queue)
+  public function send($data, $queueName)
   {
-    $this->zendQueue->setOption('queueUrl', $this->amazonUrl . $queue);
-    $this->zendQueue->send(json_encode($data));
+    $this->getQueue()->setOption('queueUrl', $this->amazonUrl . $this->nomalizeQueueName($queueName));
+    $container = new fpMqContainer($data);
+    if (!empty($this->sender)) {
+      $container->addMetaData('sender', $this->sender);
+    }
+    $this->getQueue()->send($container->encode());
     return $this;
+  }
+
+  /**
+   * @see fpMqAmazonQueue::receive()
+   */
+  public function receive($maxMessages = null, $timeout = null, Zend_Queue $queue = null)
+  {
+    $messages = $this->getQueue()->receive($maxMessages, $timeout, $queue);
+    $container = new fpMqContainer(null);
+    $return = array();
+    /* @var $message Zend_Queue_Message */
+    foreach ($messages as $key => $message) {
+      $message->body = $container->setData($message->body)->decode();
+      if (!empty($this->sender) && $container->getMetaData('sender') == $this->sender) {
+        continue;
+      }
+      $return[] = $message->toArray();
+    }
+    return new Zend_Queue_Message_Iterator(array(
+      'queue' => $this->getQueue(),
+      'messageClass' => $this->getQueue()->getMessageClass(),
+      'data' => $return
+    ));
   }
 
   /**
@@ -147,27 +206,30 @@ class fpMqQueue
    * @param bool $refresh
    * @param string $prefix
    *
-   * @return array
+   * @return array - array of queues names without url
    */
-  public function getQueues($refresh = false, $prefix = null)
+  public function getQueues($refresh = false)
   {
-
-     if (null === $this->queuesList) {
-        $refresh = true;
-     }
-     if (!$refresh) {
-        return $this->queuesList;
-     }
-     $this->queuesList = $this->zendQueue->getQueues();
-     if ($prefix) {
-        foreach ($this->queuesList as $key => $queueName) {
-           $queueName = substr(strrchr($queueName, '/'), 1);
-           if ($prefix . '_' != substr($queueName, 0, strlen($prefix) + 1)) {
-              unset($this->queuesList[$key]);
-           }
+    if (null === $this->queuesList) {
+      $refresh = true;
+    }
+    if (!$refresh) {
+      return $this->queuesList;
+    }
+    $this->queuesList = array();
+    $queuesList = $this->getQueue()->getQueues();
+    $options = $this->getQueue()->getAdapter()->getOptions();
+    foreach ($queuesList as $key => $queueName) {
+      $queueName = substr(strrchr($queueName, '/'), 1);
+      if (!empty($options['prefix'])) {
+        $prefixLength = strlen($options['prefix']) + 1;
+        if ($options['prefix'] . '_' != substr($queueName, 0, $prefixLength)) {
+          continue;
         }
-     }
-     return $this->queuesList;
+        $queueName = substr($queueName, $prefixLength);
+      }
+      $this->queuesList[] = $queueName;
+    }
+    return $this->queuesList;
   }
-
 }

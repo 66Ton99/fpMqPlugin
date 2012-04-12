@@ -43,6 +43,8 @@ class fpMqFunction
     $file = ROOTDIR . '/lib/vendor/symfony/lib/config/sfConfig.class.php';
     if (!is_readable($file)) return false;
     require_once $file;
+    if (sfConfig::get('fp_mq_test')) return true;
+
     require_once ROOTDIR . '/lib/vendor/symfony/lib/yaml/sfYaml.php';
     $configs = array();
     if (($mainConfig = sfYaml::load(__DIR__ . '/../' . $config)) && is_array($mainConfig))
@@ -53,7 +55,13 @@ class fpMqFunction
     {
       $configs = static::arrayMergeRecursive($configs, $appConfig);
     }
-    static::registerConfigsToSystem($sectionName, $configs['all'], $levels);
+    $env = sfConfig::get('sf_environment', 'all');
+    $envConfigs = $configs['all'];
+    if ('all' != $env && !empty($configs[$env])) {
+      $envConfigs = static::arrayMergeRecursive($envConfigs, $configs[$env]);
+    }
+
+    static::registerConfigsToSystem($sectionName, $envConfigs, $levels);
     return true;
   }
 
