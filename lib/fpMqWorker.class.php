@@ -62,8 +62,7 @@ class fpMqWorker
   public function process()
   {
     foreach ($this->queue->getQueues() as $queue) {
-      $this->queue->setOption('queueUrl', $queue);
-      $messages = $this->queue->receive($this->resiveAtOnce, $this->lockTime);
+      $messages = $this->queue->receive($queue, $this->resiveAtOnce, $this->lockTime);
       if (count($messages) && $message = $messages->current()) {
         static::createFork(array($message, $queue), array($this, 'execute'));
       }

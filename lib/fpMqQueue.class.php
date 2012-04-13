@@ -180,8 +180,9 @@ class fpMqQueue
   /**
    * @see fpMqAmazonQueue::receive()
    */
-  public function receive($maxMessages = null, $timeout = null, Zend_Queue $queue = null)
+  public function receive($queueName, $maxMessages = null, $timeout = null, Zend_Queue $queue = null)
   {
+    $this->getQueue()->setOption('queueUrl', $this->amazonUrl . $this->nomalizeQueueName($queueName));
     $messages = $this->getQueue()->receive($maxMessages, $timeout, $queue);
     $container = new fpMqContainer(null);
     $return = array();

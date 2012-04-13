@@ -29,6 +29,16 @@ class fpMqFunction
     }
   }
 
+  public static function init()
+  {
+    $file = ROOTDIR . '/config/ProjectConfiguration.class.php';
+    if (!is_readable($file)) return false;
+    require_once $file;
+    $configuration = new ProjectConfiguration();
+    $configuration->initConfiguration();
+    return true;
+  }
+
   /**
    * Load configs
    *
