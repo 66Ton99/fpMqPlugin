@@ -8,6 +8,7 @@ all:
     id: '' #TODO fill
     key: '' #TODO fill
     prefix: ''
+    sender: ''
 test:
   test:
     test: 'test2' # don't chage
