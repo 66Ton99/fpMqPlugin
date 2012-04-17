@@ -30,8 +30,10 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
   public function resive_noOwn()
   {
     if (!fpMqFunction::loadConfig('config/fp_mq.yml')) {
-      $this->markTestIncomplete('Now test works only in Symfony environment');
+      $this->markTestSkipped('Now test works only in Symfony environment');
     }
+    sfConfig::set('fp_mq_test', false);
+    sfConfig::set('sf_environment', 'test');
     static::$service = fpMqQueue::getInstance();
     $this->send();
     $resived = true;
@@ -51,8 +53,6 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
    */
   public function connect()
   {
-    sfConfig::set('fp_mq_test', false);
-    sfConfig::set('sf_environment', 'test');
     $options = sfConfig::get('fp_mq_driver_options');
     $options['sender'] = '';
     static::$service = fpMqQueue::init($options, sfConfig::get('fp_mq_amazon_url'));
@@ -89,7 +89,7 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
     do
     {
       sleep(1);
-      $responses = static::$service->receive(1, 3);
+      $responses = static::$service->receive('queue', 1, 3);
       $i++;
       if (10 < $i) $this->fail('Message does not resived');
     } while(!count($responses));

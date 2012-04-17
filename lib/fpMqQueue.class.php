@@ -139,7 +139,7 @@ class fpMqQueue
   /**
    * Return singleton
    *
-   * @return Queue
+   * @return fpMqQueue
    */
   public static function getInstance()
   {

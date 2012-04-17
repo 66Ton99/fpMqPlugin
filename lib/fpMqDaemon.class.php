@@ -31,10 +31,16 @@ class fpMqDaemon
   /**
    * Constructor
    *
+   * @param callback $callback
+   *
    * @return void
    */
   public function __construct($callback)
   {
+    if (!is_callable($callback)) {
+      throw new fpMqException('Provided callback is invalid');
+    }
+
     $this->pidFile = $this->getTmpDir() . $this->pidFile;
     switch (strtolower(@$_SERVER['argv'][1]))
     {

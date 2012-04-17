@@ -16,7 +16,7 @@ class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
   {
     $this->assertEquals(static::MESSAGE, $message);
     $this->assertEquals(static::QUEUENAME, $queueName);
-    exit;
+    exit; // It must stop thread but main test will continue work
   }
 
   /**
@@ -32,33 +32,40 @@ class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
    */
   public function process()
   {
-    $this->markTestIncomplete('TODO finish');
-    $queueMock = $this->getMock('Zend_Queue', array(), array(), '', false);
+    $queueMock = $this->getMock('fpMqQueue', array('getQueues', 'receive'), array(), '', false);
     $queueMock->expects($this->once())
       ->method('getQueues')
-      ->will($this->returnValue(array('http://Someurl.com/134435/' . static::QUEUENAME)));
-    $objArr = new ArrayObject(array());
-    $objArr->body = static::MESSAGE;
-    $queueMock->expects($this->once())
+      ->will(
+        $this->returnValue(
+          array(
+            'http://Someurl.com/134435/' . static::QUEUENAME,
+            'http://Someurl.com/134435/' . static::QUEUENAME . '2'
+          )
+        )
+      );
+
+    $obj = new stdClass();
+    $obj->body = static::MESSAGE;
+    $queueMock->expects($this->exactly(2))
       ->method('receive')
-      ->will($this->returnValue(new ArrayIterator(array($objArr))));
+      ->will($this->returnValue(new ArrayIterator(array($obj))));
+    $queueMock->expects($this->never())
+      ->method('callback')
+      ->will($this->returnValue(true));
 
-
-    $workerClassName = 'fpMqWorker' . time();
-    $mock = $this->getMock('fpMqWorker', array(), array(), $workerClassName, false);
-    $mock->expects($this->any())
-        ->method('createFork')
-        ->with($this->stringContains(static::MESSAGE),
-               $this->stringContains(static::QUEUENAME));
-    $class = new ReflectionClass($workerClassName);
-    $queueProperty = $class->getProperty('queue');
-    $queueProperty->setAccessible(true);
-    $queueProperty->setValue($mock, $queueMock);
-    $callbackProperty = $class->getProperty('callback');
-    $callbackProperty->setAccessible(true);
-    $callbackProperty->setValue($mock, array($this, 'callback'));
+    $mock = $this->getMock('fpMqWorker', array('createFork', 'deamonFactory'), array(array($queueMock, 'callback'), $queueMock), '', true);
+    $mockStatic = get_class($mock);
+    $mockStatic::staticExpects($this->exactly(2))
+      ->method('createFork')
+//       ->with(
+//         $this->arrayHasKey('body'),
+//         $this->stringContains(static::QUEUENAME)
+//       )
+    ;
 
     $mock->process();
+
+    // TODO add more asserts
   }
 
 }
