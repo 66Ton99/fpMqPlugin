@@ -29,11 +29,6 @@ class fpMqQueue
    */
   protected $amazonUrl;
 
-  /**
-   * @var string
-   */
-  protected $queueNamePrefix;
-
   protected $sender;
 
   /**
@@ -41,12 +36,11 @@ class fpMqQueue
    *
    * @return void
    */
-  protected function __construct(array $options, $amazonUrl, $queueNamePrefix = null)
+  protected function __construct(array $options, $amazonUrl)
   {
     if (!empty($options['sender'])) {
       $this->sender = $options['sender'];
     }
-    $this->queueNamePrefix = $queueNamePrefix;
     $this->amazonUrl = $amazonUrl;
     $this->zendQueue = $this->queueFactory($this->driverFactory($options));
   }
