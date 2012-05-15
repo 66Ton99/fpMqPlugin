@@ -31,18 +31,43 @@ class fpMqQueue
 
   protected $sender;
 
+  protected $prefix;
+
+  protected $driverClassName = 'Zend_Queue_Adapter_Memcacheq';
+
   /**
    * Constructor
    *
    * @return void
    */
-  protected function __construct(array $options, $amazonUrl)
+  protected function __construct(array $options)
   {
     if (!empty($options['sender'])) {
       $this->sender = $options['sender'];
     }
-    $this->amazonUrl = $amazonUrl;
-    $this->zendQueue = $this->queueFactory($this->driverFactory($options));
+    if (!empty($options['prefix'])) {
+      $this->prefix = $options['prefix'];
+    }
+    if (!empty($options['options']['name'])) {
+      $this->amazonUrl = $options['options']['name'];
+    }
+    if (!empty($options['class'])) {
+      $this->driverClassName = $options['class'];
+    }
+    $this->zendQueue = $this->queueFactory($this->driverFactory($options['options']));
+  }
+
+  /**
+   * Sets prefix
+   *
+   * @param string $prefix
+   *
+   * @return fpMqQueue
+   */
+  public function setPrefix($prefix)
+  {
+    $this->prefix = $prefix;
+    return $this;
   }
 
   /**
@@ -56,7 +81,7 @@ class fpMqQueue
 
 
   /**
-   * Magic method
+   * Magic method which transports all methods to connected class
    *
    * @param string $method
    * @param array $params
@@ -96,7 +121,8 @@ class fpMqQueue
    */
   protected function driverFactory(array $options)
   {
-    return new fpMqAmazonQueue($options);
+    $class = $this->driverClassName;
+    return new $class($options);
   }
 
   /**
@@ -107,9 +133,9 @@ class fpMqQueue
    *
    * @return fpMqQueue
    */
-  public static function init(array $options, $amazonUrl)
+  public static function init(array $options)
   {
-    return static::$instance = new static($options, $amazonUrl);
+    return static::$instance = new static($options);
   }
 
   /**
@@ -123,10 +149,7 @@ class fpMqQueue
   public static function sfInit()
   {
     if (!fpMqFunction::loadConfig('config/fp_mq.yml')) return false;
-    static::$instance = new static(
-      sfConfig::get('fp_mq_driver_options'),
-      sfConfig::get('fp_mq_amazon_url')
-    );
+    static::$instance = new static(sfConfig::get('fp_mq_driver'));
     return true;
   }
 
@@ -146,9 +169,8 @@ class fpMqQueue
 
   protected function nomalizeQueueName($name)
   {
-    $options = $this->getQueue()->getAdapter()->getOptions();
-    if (!empty($options['prefix'])) {
-      $name = $options['prefix'] . '_' . $name;
+    if ($this->prefix) {
+      $name = $this->prefix . '_' . $name;
     }
     return $name;
   }
@@ -162,7 +184,7 @@ class fpMqQueue
    */
   public function send($data, $queueName)
   {
-    $this->getQueue()->setOption('queueUrl', $this->amazonUrl . $this->nomalizeQueueName($queueName));
+    $this->getQueue()->setOption('name', $this->amazonUrl . $this->nomalizeQueueName($queueName));
     $container = new fpMqContainer($data);
     if (!empty($this->sender)) {
       $container->addMetaData('sender', $this->sender);
@@ -176,7 +198,7 @@ class fpMqQueue
    */
   public function receive($queueName, $maxMessages = null, $timeout = null, Zend_Queue $queue = null)
   {
-    $this->getQueue()->setOption('queueUrl', $this->amazonUrl . $this->nomalizeQueueName($queueName));
+    $this->getQueue()->setOption('name', $this->amazonUrl . $this->nomalizeQueueName($queueName));
     $messages = $this->getQueue()->receive($maxMessages, $timeout, $queue);
     $container = new fpMqContainer(null);
     $return = array();
@@ -213,12 +235,11 @@ class fpMqQueue
     }
     $this->queuesList = array();
     $queuesList = $this->getQueue()->getQueues();
-    $options = $this->getQueue()->getAdapter()->getOptions();
     foreach ($queuesList as $key => $queueName) {
       $queueName = substr(strrchr($queueName, '/'), 1);
-      if (!empty($options['prefix'])) {
-        $prefixLength = strlen($options['prefix']) + 1;
-        if ($options['prefix'] . '_' != substr($queueName, 0, $prefixLength)) {
+      if ($this->prefix) {
+        $prefixLength = strlen($this->prefix) + 1;
+        if ($this->prefix . '_' != substr($queueName, 0, $prefixLength)) {
           continue;
         }
         $queueName = substr($queueName, $prefixLength);

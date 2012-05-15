@@ -1,14 +1,16 @@
 all:
-  amazon_sqs_test_queue: '' #TODO fill optional. It is required for tests
+  amazon_sqs_test_queue: '' #optional. It is required for tests
   test:
-    test: 'test' # don't chage
-  driver: 'fpMqAmazonQueue'
-  amazon_url: '' #TODO fill
-  driver_options:
-    id: '' #TODO fill
-    key: '' #TODO fill
+    test: 'test' # don't chage!!!
+  driver:
+    class: 'fpMqAmazonQueue' #TODO implement. It doesn't work now
     prefix: ''
     sender: ''
+    options:
+      name: '' #Required
+      driverOptions:
+        id: '' #Required
+        key: '' #Required
 test:
   test:
-    test: 'test2' # don't chage
+    test: 'test2' # don't chage!!!

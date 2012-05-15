@@ -16,26 +16,19 @@ class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
    *
    * @return fpMqQueue
    */
-  protected function getMokedQueue($queues, $options = array(), $getQueuesExpacts = 1)
+  protected function getMokedQueue($queues, $prefix = null, $getQueuesExpacts = 1)
   {
-    $mockAdapter = $this->getMocK('fpMqAmazonQueue', array('getOptions'), array(), '', false);
-    $mockAdapter->expects($this->exactly($getQueuesExpacts))
-      ->method('getOptions')
-      ->will($this->returnValue($options));
-
     $mockZendQueue = $this->getMocK('Zend_Queue', array('getQueues', 'getAdapter'), array(), '', false);
     $mockZendQueue->expects($this->exactly($getQueuesExpacts))
       ->method('getQueues')
       ->will($this->returnValue($queues));
-    $mockZendQueue->expects($this->exactly($getQueuesExpacts))
-      ->method('getAdapter')
-      ->will($this->returnValue($mockAdapter));
 
     $mockQueue = $this->getMocK('fpMqQueue', array('getQueue'), array(), '', false);
     $mockQueue->expects($this->atLeastOnce())
       ->method('getQueue')
       ->will($this->returnValue($mockZendQueue));
 
+    $mockQueue->setPrefix($prefix);
 
     return $mockQueue;
   }
@@ -60,7 +53,7 @@ class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
       'http://amazon.site/id/test_queue',
       'http://amazon.site/id/test2_queue',
     );
-    $queue = $this->getMokedQueue($queues, array('prefix' => 'test'));
+    $queue = $this->getMokedQueue($queues, 'test');
     $this->assertEquals(array('queue'), $queue->getQueues());
   }
 
@@ -70,7 +63,7 @@ class fpMqQueueTestCase extends PHPUnit_Framework_TestCase
   public function getQueues_refrash()
   {
     $queues = array('http://amazon.site/id/test_queue');
-    $queue = $this->getMokedQueue($queues, array(), 2);
+    $queue = $this->getMokedQueue($queues, null, 2);
     $this->assertEquals(array('test_queue'), $queue->getQueues());
     $this->assertEquals(array('test_queue'), $queue->getQueues(true), 'Cannot clear cache');
   }

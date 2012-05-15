@@ -19,25 +19,19 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
   protected $service;
 
   /**
-   * Amazon conection url
-   *
-   * @var string
-   */
-  protected $queueUrl;
-
-  /**
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::__construct()
    */
   public function __construct($options, Zend_Queue $queue = null)
   {
+    parent::__construct($options, $queue);
+    $options = $this->_options['driverOptions'];
     if (empty($options['id']) || empty($options['key']))
     {
       require_once 'Zend/Queue/Exception.php';
-      throw new Zend_Queue_Exception('Options: "id" and "key" are required');
+      throw new Zend_Queue_Exception('driverOptions: "id" and "key" are required');
     }
     $this->service = new Zend_Service_Amazon_Sqs($options['id'], $options['key']);
-    parent::__construct($options, $queue);
   }
 
   /**
@@ -67,7 +61,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
    */
   public function deleteMessage(Zend_Queue_Message $message)
   {
-    return $this->service->deleteMessage($this->getQueueUrl(), $message->handle);
+    return $this->service->deleteMessage($this->getQueue()->getName(), $message->handle);
   }
 
   /**
@@ -88,7 +82,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
     if (null !== $queue) {
       $this->setQueue($queue);
     }
-    $responseArr = $this->service->receive($this->getQueueUrl(), $maxMessages, $timeout);
+    $responseArr = $this->service->receive($this->getQueue()->getName(), $maxMessages, $timeout);
     return new Zend_Queue_Message_Iterator(array(
       'queue' => $this->getQueue(),
       'messageClass' => $this->getQueue()->getMessageClass(),
@@ -105,7 +99,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
     if (null !== $queue) {
       $this->setQueue($queue);
     }
-    return $this->service->send($this->getQueueUrl(), $message);
+    return $this->service->send($this->getQueue()->getName(), $message);
   }
 
   /**
@@ -117,7 +111,7 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
     if (null !== $queue) {
       $this->setQueue($queue);
     }
-    return $this->service->count($this->getQueueUrl());
+    return $this->service->count($this->getQueue()->getName());
   }
 
   /**
@@ -148,20 +142,5 @@ class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
       'count'         => true,
       'isExists'      => true,
     );
-  }
-
-  /**
-   * Get queue url
-   *
-   * @return string
-   */
-  protected function getQueueUrl()
-  {
-    if (!$this->getQueue()->hasOption('queueUrl'))
-    {
-      require_once 'Zend/Queue/Exception.php';
-      throw new Zend_Queue_Exception('"queueUrl" option must be specified before use');
-    }
-    return $this->getQueue()->getOption('queueUrl');
   }
 }

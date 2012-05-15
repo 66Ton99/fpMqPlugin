@@ -22,6 +22,16 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
    */
   protected static $service;
 
+  protected function getTestOptions()
+  {
+    sfConfig::set('sf_environment', 'test');
+    $options = sfConfig::get('fp_mq_driver');
+    $options['class'] = 'fpMqAmazonQueue';
+    $options['sender'] = '';
+    $options['prefix'] = 'test'; // TODO fixed
+    return $options;
+  }
+
   /**
    * @test
    *
@@ -32,9 +42,12 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
     if (!fpMqFunction::loadConfig('config/fp_mq.yml')) {
       $this->markTestSkipped('Now test works only in Symfony environment');
     }
-    sfConfig::set('fp_mq_test', false);
-    sfConfig::set('sf_environment', 'test');
-    static::$service = fpMqQueue::getInstance();
+    $options = $this->getTestOptions();
+    if (empty($options['options']['driverOptions']['id']) || empty($options['options']['driverOptions']['key'])) {
+      $this->markTestSkipped('This test can not be runned without connection parameters: "key" and "id"');
+    }
+    $options['sender'] = 'me';
+    static::$service = fpMqQueue::init($options);
     $this->send();
     $resived = true;
     try {
@@ -53,9 +66,8 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
    */
   public function connect()
   {
-    $options = sfConfig::get('fp_mq_driver_options');
-    $options['sender'] = '';
-    static::$service = fpMqQueue::init($options, sfConfig::get('fp_mq_amazon_url'));
+    $options = $this->getTestOptions();
+    static::$service = fpMqQueue::init($options);
     $this->assertNotNull(static::$service);
 
     static::$service->setOption(
