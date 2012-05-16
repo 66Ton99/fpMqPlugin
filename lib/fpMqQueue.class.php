@@ -42,6 +42,9 @@ class fpMqQueue
    */
   protected function __construct(array $options)
   {
+
+    $options = array_merge(array('options' => array()), $options);
+
     if (!empty($options['sender'])) {
       $this->sender = $options['sender'];
     }
@@ -127,7 +130,7 @@ class fpMqQueue
 
   /**
    * Initialization
-   *
+   *options
    * @param array $options
    * @param strings $amazonUrl
    *
@@ -173,6 +176,16 @@ class fpMqQueue
       $name = $this->prefix . '_' . $name;
     }
     return $name;
+  }
+
+  /**
+   * (non-PHPdoc)
+   * @see Zend_Queue_Adapter_AdapterInterface::create()
+   */
+  public function createQueue($name, $timeout = null)
+  {
+    $this->zendQueue = $this->getQueue()->createQueue($this->nomalizeQueueName($name), $timeout);
+    return $this;
   }
 
   /**

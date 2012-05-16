@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../../autoload.php';
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
-class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
+class fpMqQueueSQSFnTestCase extends PHPUnit_Framework_TestCase
 {
 
   static protected $message = array('test' => 'Test message');
@@ -26,7 +26,7 @@ class fpMqQueueFnTestCase extends PHPUnit_Framework_TestCase
   {
     sfConfig::set('sf_environment', 'test');
     $options = sfConfig::get('fp_mq_driver');
-    $options['class'] = 'fpMqAmazonQueue';
+    $options['class'] = 'Zend_Queue_Adapter_AmazonSQS';
     $options['sender'] = '';
     $options['prefix'] = 'test'; // TODO fixed
     return $options;

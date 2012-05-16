@@ -1,11 +1,11 @@
 <?php
 
 /**
- * Amazon SQS Queue
+ * Queue adapter for Amazon SQS
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
-class fpMqAmazonQueue extends Zend_Queue_Adapter_AdapterAbstract
+class Zend_Queue_Adapter_AmazonSQS extends Zend_Queue_Adapter_AdapterAbstract
 {
 
   /**

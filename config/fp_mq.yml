@@ -7,10 +7,13 @@ all:
     prefix: ''
     sender: ''
     options:
-      name: '' #Required
+      name: '' #Required for Amazone SQS
       driverOptions:
-        id: '' #Required
-        key: '' #Required
+        id: '' #Required for Amazone SQS
+        key: '' #Required for Amazone SQS
+        port: 22201 #Optional for Memcacheq
+        host: 127.0.0.1 #Optional for Memcacheq
+
 test:
   test:
     test: 'test2' # don't chage!!!
