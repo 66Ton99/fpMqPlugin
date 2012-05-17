@@ -4,16 +4,18 @@ require_once 'PHPUnit/Framework/TestCase.php';
 require_once __DIR__ . '/../../../autoload.php';
 
 /**
- * Amazon SQS functional test case.
+ * Rabbit Message Queue functional test case.
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
-class fpMqQueueRabbitMQFnTestCase extends PHPUnit_Framework_TestCase
+class fpMqQueueRabbitmqFnTestCase extends PHPUnit_Framework_TestCase
 {
 
   static protected $message = array('test' => 'Test message');
 
   static protected $messageId;
+
+  static protected $testQueueName = 'queue';
 
   /**
    * Connection
@@ -24,9 +26,8 @@ class fpMqQueueRabbitMQFnTestCase extends PHPUnit_Framework_TestCase
 
   protected function getTestOptions()
   {
-    sfConfig::set('sf_environment', 'test');
-    $options = sfConfig::get('fp_mq_driver');
-    $options['class'] = 'AMQP_Queue_Adapter_Rabbitmq';
+    $options = array();
+    $options['class'] = 'Zend_Queue_Adapter_Rabbitmq';
     $options['sender'] = '';
     $options['prefix'] = 'test'; // TODO fixed
     return $options;
@@ -34,20 +35,28 @@ class fpMqQueueRabbitMQFnTestCase extends PHPUnit_Framework_TestCase
 
   /**
    * @test
+   */
+  public function init()
+  {
+//     $this->markTestIncomplete('Need to finish');
+    $options = $this->getTestOptions();
+    $options['sender'] = 'me';
+    static::$service = fpMqQueue::init($options);
+    $this->assertNotNull(static::$service);
+    if (!static::$service->isExists(static::$testQueueName))
+    {
+      static::$service = static::$service->createQueue(static::$testQueueName);
+    }
+  }
+
+  /**
+   * @test
    *
+   * @depends init
    * @todo remove this message
    */
   public function resive_noOwn()
   {
-    if (!fpMqFunction::loadConfig('config/fp_mq.yml')) {
-      $this->markTestSkipped('Now test works only in Symfony environment');
-    }
-    $options = $this->getTestOptions();
-    if (empty($options['options']['driverOptions']['id']) || empty($options['options']['driverOptions']['key'])) {
-      $this->markTestSkipped('This test can not be runned without connection parameters: "key" and "id"');
-    }
-    $options['sender'] = 'me';
-    static::$service = fpMqQueue::init($options);
     $this->send();
     $resived = true;
     try {
@@ -70,11 +79,7 @@ class fpMqQueueRabbitMQFnTestCase extends PHPUnit_Framework_TestCase
     static::$service = fpMqQueue::init($options);
     $this->assertNotNull(static::$service);
 
-    static::$service->setOption(
-      'queueUrl',
-      sfConfig::get('fp_mq_amazon_url') . (empty($options['prefix'])?'':$options['prefix'] . '_') .
-        sfConfig::get('fp_mq_amazon_sqs_test_queue')
-    );
+    static::$service->setOption('name', 'queue');
     $messageHandle = $this->resive(); // resive previos message and delete
     $this->assertTrue(static::$service->deleteMessage($messageHandle));
   }
@@ -87,7 +92,7 @@ class fpMqQueueRabbitMQFnTestCase extends PHPUnit_Framework_TestCase
    */
   public function send()
   {
-    static::$messageId = static::$service->send(static::$message, sfConfig::get('fp_mq_amazon_sqs_test_queue'));
+    static::$messageId = static::$service->send(static::$message, static::$testQueueName);
   }
 
   /**

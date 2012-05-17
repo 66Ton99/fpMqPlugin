@@ -38,7 +38,7 @@ class fpMqQueueMemcacheQFnTestCase extends PHPUnit_Framework_TestCase
    */
   public function init()
   {
-//     $this->markTestIncomplete('Need to finish');
+    $this->markTestIncomplete('Need to finish');
     $options = $this->getTestOptions();
     $options['sender'] = 'me';
     static::$service = fpMqQueue::init($options);

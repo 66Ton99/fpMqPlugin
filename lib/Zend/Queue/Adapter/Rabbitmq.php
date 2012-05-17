@@ -1,21 +1,22 @@
 <?php
+
 /**
  * Class for using a RabbitMQ as a queue
  *
  * @category AMQP
- * @package AMQP_Queue
+ * @package Zend_Queue
  * @subpackage Adapter
  * @author Ritesh Jha
+ * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  * @copyright Copyright (c) mailrkj(at)gmail(dot)com
  * @see http://riteshsblog.blogspot.com/2011/03/rabbitmq-adapter-for-zend-queue-using.html
  */
-
-class AMQP_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
+class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
 {
     /**
      * @var AMQPConnection
      */
-    private $_cnn = array();
+    private $_cnn;
 
     /**
      * @var AMQP_Queue_Exchange
@@ -27,12 +28,6 @@ class AMQP_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     private $_amqpQueue = null;
 
-
-    /**
-     * @var int AMQP queue flags
-     */
-    private $_amqpQueueFlag = AMQP_DURABLE;
-
     /**
      * @var int count of messages we got last time
      */
@@ -41,10 +36,8 @@ class AMQP_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     /**
      * Constructor
      *
-     * @param array|Zend_Config $options
-     * options (host,port,login,password)
+     * @param array|Zend_Config $options - host, port, login, password
      * @param null|Zend_Queue $queue
-     * @return AMQP_Queue_Adapter_Rabbitmq instance
      */
     public function __construct($options, Zend_Queue $queue = null)
     {
@@ -59,25 +52,31 @@ class AMQP_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
 
                 if (!$cnn->isConnected())
                 {
+                    require_once 'Zend/Queue/Exception.php';
                     throw new Zend_Queue_Exception("Unable to connect RabbitMQ server");
                 }
                 else
                 {
                     $this->_cnn = $cnn;
-                    $this->_amqpQueue = new AMQPQueue($this->_cnn);
+                    $this->_amqpQueue = new AMQPQueue(new AMQPChannel($this->_cnn));
                 }
             } catch (Exception $e) {
+                require_once 'Zend/Queue/Exception.php';
                 throw new Zend_Queue_Exception($e->getMessage());
             }
         }
         else
         {
-            throw new Zend_Queue_Exception("The options must be an associative array of host,port,login, password ...");
+            require_once 'Zend/Queue/Exception.php';
+            throw new Zend_Queue_Exception("The options must be an associative empty array or array of host,port,login,password...");
         }
     }
 
     /**
      * Get AMQPConnection object
+     *
+     * @deprecated - please don't use it
+     *
      * @return object
      */
     public function getConnection()
@@ -85,212 +84,202 @@ class AMQP_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
         return $this->_cnn;
     }
 
+    /**
+     * Returns exchange options
+     *
+     * @return array
+     */
+    protected function getExchangeOptions()
+    {
+      return array_merge(
+          array('routingKey' => '*', 'type' => AMQP_EX_TYPE_DIRECT, 'flags' => AMQP_DURABLE/*  | AMQP_NOASK */),
+          $this->getQueue()->getOption('exchange')?:array()
+      );
+    }
+
 
     /**
      * Set exchange for sending message to queue
-     * @param string|AMQP_Queue_Exchange $exchange
-     * @param string $routingKey
-     * @param int $type (AMQP_EX_TYPE_DIRECT, AMQP_EX_TYPE_FANOUT, AMQP_EX_TYPE_TOPIC or AMQP_EX_TYPE_HEADER)
-     * @param int $flags (AMQP_PASSIVE, AMQP_DURABLE, AMQP_AUTODELETE)
-     * @return AMQP_Queue_Exchange
+     *
+     * @return Zend_Queue_Adapter_Rabbitmq
      */
-    public function setExchange($exchange, $routingKey = "*", $type = AMQP_EX_TYPE_DIRECT, $flags = AMQP_DURABLE)
+    protected function initExchange($reload = false)
     {
-        if (! $exchange instanceof AMQP_Queue_Exchange)
-        {
-            $exchange = new AMQP_Queue_Exchange($this->_cnn, $exchange, $type, $flags);
+        if (!$this->_exchange || $reload) {
+            $exchangeOptions = $this->getExchangeOptions();
+            $this->_exchange = new AMQPExchange(new AMQPChannel($this->_cnn)); // TODO move AMQPChannel to vars
+            $this->_exchange->setName($this->getQueue()->getName());
+            $this->_exchange->setType($exchangeOptions['type']);
+            $this->_exchange->setFlags ($exchangeOptions['flags']);
         }
-        $this->_exchange = $exchange;
-        $this->setRoutingKey($routingKey);
-
-        return $exchange;
+        return $this;
     }
 
     /**
-     * Set routing key for queu
-     * @param string $routingKey
-     * @param AMQP_Queue $queue
-     * @return bool
-     */
-    public function setRoutingKey($routingKey, AMQP_Queue $queue = null)
-    {
-        if ($queue)
-        {
-            $queueName = $queue->getName();
-        } else {
-            $queueName = $this->_queue->getName();
-        }
-        return $this->_exchange->bind($queueName, $routingKey);
-    }
-
-    /**
-     * set AMQPQueue flag(s)
-     * @param int $flag
-     */
-    public function setQueueFlag($flag)
-    {
-        $this->_amqpQueueFlag = $flag;
-    }
-
-    /**
-     * create queue
-     * @param string $name
-     * @param int $timeout
-     * @return int
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::create()
      */
     public function create($name, $timeout = null)
     {
         try {
-            $this->_count = $this->_amqpQueue->declare($name, $this->_amqpQueueFlag);
-        } catch (Exception $e)
-        {
+            $this->_amqpQueue->setName($name);
+            $exchangeOptions = $this->getExchangeOptions();
+            $this->_amqpQueue->setFlags($exchangeOptions['flags']);
+            $this->_count = $this->_amqpQueue->declare();
+        } catch (Exception $e) {
             return false;
         }
         return true;
     }
 
     /**
-     * delete queue
-     * @param $name
-     * @return bool
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::delete()
      */
     public function delete($name)
     {
-        return $this->_amqpQueue->delete($name);
+        var_dump($name);
+        $this->_amqpQueue->setName($name);
+        return $this->_amqpQueue->delete();
     }
 
     /**
-     * Publish message to queue
-     * @param mixed $message (array or string)
-     * @param Zend_Queue $queue
-     * @return boolean
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::send()
      */
     public function send($message, Zend_Queue $queue = null)
     {
         if (is_array($message)) {
             $message = Zend_Json_Encoder::encode($message);
         }
-
+        $reload = false;
         if ($queue)
         {
-            $routingKey = $queue->getOption('routingKey');
-        } else {
-            $routingKey = $this->_queue->getOption('routingKey');
+            $this->setQueue($queue);
+            $reload = true;
         }
+        $this->initExchange($reload);
 
-        if ($this->_exchange)
-        {
-            return $this->_exchange->publish($message, $routingKey, AMQP_MANDATORY, array('delivery_mode' => 2));
-        } else {
-            throw new Zend_Queue_Exception("Rabbitmq exchange not found");
-        }
+        return $this->_exchange->publish(
+            $message,
+            $this->getQueue()->getOption('routingKey')?:'*',
+            AMQP_MANDATORY,
+            array('delivery_mode' => 2)
+        );
     }
 
     /**
-     * Get messages in the queue
-     *
-     * @param  integer|null $maxMessages Maximum number of messages to return
-     * @param  integer|null $timeout Visibility timeout for these messages
-     * @param  Zend_Queue|null $queue
-     * @return Zend_Queue_Message_Iterator
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::receive()
      */
     public function receive($maxMessages = null, $timeout = null, Zend_Queue $queue = null)
     {
+        $reload = false;
+        if ($queue) {
+            $this->setQueue($queue);
+            $reload = true;
+        }
+        $this->initExchange($reload);
+
+        $result = array();
         $maxMessages = (int) $maxMessages ? (int) $maxMessages : 1;
-        if (isset($this->_options['method']) && 'consume' == $this->_options['method'])
-        {
+        if (isset($this->_options['method']) && 'consume' == $this->_options['method']) {
             // use new AMQP_Queue_Adapter_Rabbitmq(array('method' => 'consume')) to use CONSUME approach
             $consumeOptions = array(
                 'min' => 1,
                 'max' => $maxMessages,
                 'ack' => false,
             );
-            $result = $this->_amqpQueue->consume($consumeOptions);
+            $result[] = $this->_amqpQueue->consume($consumeOptions);// TODO check
             $this->_count -= sizeof($result);
         } else {
             // default approach is GET
-            $result = array();
-            for ($i = $maxMessages; $i > 0; $i--)
-            {
-                $message = $this->_amqpQueue->get();
-                if (isset($message['delivery_tag']))
-                {
-                    $result[] = $message;
-                    $this->_count = $message['count'];
-                }
-                if ($message['count'] <= 0)
-                {
-                    break;
+            for ($i = $maxMessages; $i > 0; $i--) {
+                if ($message = $this->_amqpQueue->get()) {
+                    $result[] = array(
+                      'body' =>$message->getBody(),
+                    );
                 }
             }
         }
         return new Zend_Queue_Message_Iterator(array('data' => $result));
     }
 
-    public function getCapabilities()
-    {
-        return array(
-            'create' => true,
-            'delete' => true,
-            'send' => true,
-            'count' => true,
-            'deleteMessage' => true,
-        );
-    }
-
     /**
-     * Does a queue already exist?
-     *
-     * Use isSupported('isExists') to determine if an adapter can test for
-     * queue existance.
-     *
-     * @param  string $name Queue name
-     * @return boolean
-     */
-    public function isExists($name)
-    {
-        return isset($this->_count);
-    }
-
-    /**
-     * Get an array of all available queues
-     *
-     * Not all adapters support getQueues(); use isSupported('getQueues')
-     * to determine if the adapter supports this feature.
-     *
-     * @return array
-     */
-    public function getQueues()
-    {
-        return array($this->_queue);
-    }
-
-    /**
-     * Return the approximate number of messages in the queue
-     *
-     * @param  Zend_Queue|null $queue
-     * @return integer
-     */
-    public function count(Zend_Queue $queue = null)
-    {
-        return $this->_count;
-    }
-
-    /**
-     * Delete a message from the queue
-     *
-     * Return true if the message is deleted, false if the deletion is
-     * unsuccessful.
-     *
-     * @param  Zend_Queue_Message $message
-     * @return boolean
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::deleteMessage()
      */
     public function deleteMessage(Zend_Queue_Message $message)
     {
-        if (!isset($message->delivery_tag))
-        {
+        if (!isset($message->delivery_tag)) {
+            require_once 'Zend/Queue/Exception.php';
             throw new Zend_Queue_Exception('No delivery tag for Acking!');
         }
         return $this->_amqpQueue->ack($message->delivery_tag);
     }
+
+    /**
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::getCapabilities()
+     */
+    public function getCapabilities()
+    {
+        return array(
+            'create'        => true,
+            'delete'        => true,
+            'send'          => true,
+            'receive'       => true,
+            'deleteMessage' => true,
+            'isExists'      => true,
+            'getQueues'     => false,
+            'count'         => false,
+        );
+    }
+
+    /**
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::isExists()
+     */
+    public function isExists($name)
+    {
+        $this->getQueue()->setOption(Zend_Queue::NAME, $name);
+        $this->initExchange(true);
+        try {
+//             $this->_exchange->delete();
+            return $this->_exchange->declare();
+        } catch (AMQPExchangeException $e) {
+            return true;
+        }
+
+    }
+
+    /**
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::getQueues()
+     */
+    public function getQueues()
+    {
+        require_once 'Zend/Queue/Exception.php';
+        throw new Zend_Queue_Exception('getQueues() is not supported in this adapter');
+//         return array($this->_queue);
+    }
+
+    /**
+     * {@inheritdoc}
+     * @see Zend_Queue_Adapter_AdapterInterface::count()
+     */
+    public function count(Zend_Queue $queue = null)
+    {
+        require_once 'Zend/Queue/Exception.php';
+        throw new Zend_Queue_Exception('count() is not supported in this adapter');
+//         $reload = false;
+//         if ($queue)
+//         {
+//             $this->setQueue($queue);
+//             $reload = true;
+//         }
+// //         $this->initExchange($reload);
+//         return $this->_count;
+    }
+
 }
