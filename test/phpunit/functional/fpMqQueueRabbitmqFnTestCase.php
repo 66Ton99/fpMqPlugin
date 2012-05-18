@@ -62,8 +62,10 @@ class fpMqQueueRabbitmqFnTestCase extends PHPUnit_Framework_TestCase
     try {
       $this->resive();
     } catch(PHPUnit_Framework_AssertionFailedError $e) {
-      if ('Message does not resived' == $e->getMessage()) {
-          $resived = false;
+      if ('Message does not resived' == strstr($e->getMessage(), "\n", true)) {
+        $resived = false;
+      } else {
+        throw $e;
       }
     }
     $this->assertFalse($resived, 'Own message was resived');
@@ -102,15 +104,15 @@ class fpMqQueueRabbitmqFnTestCase extends PHPUnit_Framework_TestCase
   public function resive()
   {
     $responses = array();
-    $i = 0;
-    do
-    {
-      sleep(1);
+//     $i = 0;
+//     do
+//     {
+      sleep(10);
       $responses = static::$service->receive('queue', 1, 3);
-      $i++;
-      if (10 < $i) $this->fail('Message does not resived');
-    } while(!count($responses));
-    $this->assertEquals(1, count($responses));
+//       $i++;
+//       if (10 < $i) $this->fail('Message does not resived');
+//     } while(!count($responses));
+    $this->assertEquals(1, count($responses), 'Message does not resived');
     $this->assertInstanceOf('Zend_Queue_Message', $response = $responses->current());
     $this->assertEquals(static::$message, $response->body); // TODO find better way
     return $response;

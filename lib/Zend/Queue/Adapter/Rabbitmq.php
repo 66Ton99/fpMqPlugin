@@ -19,7 +19,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     private $_cnn;
 
     /**
-     * @var AMQP_Queue_Exchange
+     * @var AMQPExchange
      */
     private $_exchange = null;
 
@@ -27,6 +27,11 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      * @var AMQPQueue
      */
     private $_amqpQueue = null;
+
+    /**
+     * @var AMQPChannel
+     */
+    private $_channel = null;
 
     /**
      * @var int count of messages we got last time
@@ -58,7 +63,8 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
                 else
                 {
                     $this->_cnn = $cnn;
-                    $this->_amqpQueue = new AMQPQueue(new AMQPChannel($this->_cnn));
+                    $this->_channel = new AMQPChannel($this->_cnn);
+                    $this->_amqpQueue = new AMQPQueue($this->_channel);
                 }
             } catch (Exception $e) {
                 require_once 'Zend/Queue/Exception.php';
@@ -92,7 +98,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     protected function getExchangeOptions()
     {
       return array_merge(
-          array('routingKey' => '*', 'type' => AMQP_EX_TYPE_DIRECT, 'flags' => AMQP_DURABLE/*  | AMQP_NOASK */),
+          array(/* 'routingKey' => '*',  */'type' => AMQP_EX_TYPE_DIRECT, 'flags' => AMQP_DURABLE/*  | AMQP_NOASK */),
           $this->getQueue()->getOption('exchange')?:array()
       );
     }
@@ -107,10 +113,10 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     {
         if (!$this->_exchange || $reload) {
             $exchangeOptions = $this->getExchangeOptions();
-            $this->_exchange = new AMQPExchange(new AMQPChannel($this->_cnn)); // TODO move AMQPChannel to vars
+            $this->_exchange = new AMQPExchange($this->_channel);
             $this->_exchange->setName($this->getQueue()->getName());
             $this->_exchange->setType($exchangeOptions['type']);
-            $this->_exchange->setFlags ($exchangeOptions['flags']);
+            $this->_exchange->setFlags($exchangeOptions['flags']);
         }
         return $this;
     }
@@ -122,10 +128,16 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     public function create($name, $timeout = null)
     {
         try {
-            $this->_amqpQueue->setName($name);
-            $exchangeOptions = $this->getExchangeOptions();
-            $this->_amqpQueue->setFlags($exchangeOptions['flags']);
+            $reload = $this->getQueue()->getName() != $name;
+            $this->getQueue()->setOption(Zend_Queue::NAME, $name);
+            $this->initExchange($reload);
+            $this->_exchange->declare();
+
+            $this->_amqpQueue->setName($this->getQueue()->getName());
             $this->_count = $this->_amqpQueue->declare();
+
+            $exchangeOptions = $this->getExchangeOptions();
+            $this->_amqpQueue->bind($name, $exchangeOptions['routingKey']);
         } catch (Exception $e) {
             return false;
         }
@@ -138,9 +150,10 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function delete($name)
     {
-        var_dump($name);
-        $this->_amqpQueue->setName($name);
-        return $this->_amqpQueue->delete();
+        $reload = $this->getQueue()->getName() != $name;
+        $this->getQueue()->setOption(Zend_Queue::NAME, $name);
+        $this->initExchange($reload);
+        return $this->_exchange->delete();
     }
 
     /**
@@ -163,7 +176,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
         return $this->_exchange->publish(
             $message,
             $this->getQueue()->getOption('routingKey')?:'*',
-            AMQP_MANDATORY,
+            AMQP_NOPARAM,
             array('delivery_mode' => 2)
         );
     }
@@ -180,6 +193,8 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
             $reload = true;
         }
         $this->initExchange($reload);
+
+        $this->_amqpQueue->setName($this->getQueue()->getName());
 
         $result = array();
         $maxMessages = (int) $maxMessages ? (int) $maxMessages : 1;
@@ -230,7 +245,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
             'send'          => true,
             'receive'       => true,
             'deleteMessage' => true,
-            'isExists'      => true,
+            'isExists'      => false,
             'getQueues'     => false,
             'count'         => false,
         );
@@ -242,15 +257,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function isExists($name)
     {
-        $this->getQueue()->setOption(Zend_Queue::NAME, $name);
-        $this->initExchange(true);
-        try {
-//             $this->_exchange->delete();
-            return $this->_exchange->declare();
-        } catch (AMQPExchangeException $e) {
-            return true;
-        }
-
+        return true;
     }
 
     /**

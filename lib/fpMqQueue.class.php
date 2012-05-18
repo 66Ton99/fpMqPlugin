@@ -282,7 +282,7 @@ class fpMqQueue
   {
     if ($this->getQueue()->isSupported('isExists'))
     {
-      return $this->getQueue()->getAdapter()->isExists($name);
+      return $this->getQueue()->getAdapter()->isExists($this->nomalizeQueueName($name));
     }
     return null;
   }
