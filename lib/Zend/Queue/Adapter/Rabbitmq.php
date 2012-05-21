@@ -197,7 +197,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
         $this->_amqpQueue->setName($this->getQueue()->getName());
 
         $result = array();
-        $maxMessages = (int) $maxMessages ? (int) $maxMessages : 1;
+        //$maxMessages = (int) $maxMessages ? (int) $maxMessages : 1;
 //         if (isset($this->_options['method']) && 'consume' == $this->_options['method']) {
 //             // use new AMQP_Queue_Adapter_Rabbitmq(array('method' => 'consume')) to use CONSUME approach
 //             $consumeOptions = array(
@@ -209,7 +209,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
 //             $this->_count -= sizeof($result);
 //         } else {
             // default approach is GET
-            for ($i = $maxMessages; $i > 0; $i--) {
+            //for ($i = $maxMessages; $i > 0; $i--) {
                 if ($message = $this->_amqpQueue->get(AMQP_NOPARAM)) {
                     $result[] = array(
                       'body' => $message->getBody(),
@@ -219,7 +219,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
                     );
 //                     $this->_amqpQueue->nack($message->getDeliveryTag(), AMQP_NOPARAM); // It doesn't work. It freezes process
                 }
-            }
+            //}
 //         }
         return new Zend_Queue_Message_Iterator(array('data' => $result));
     }
