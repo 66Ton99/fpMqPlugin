@@ -24,7 +24,7 @@ class fpMqWorker
   /**
    * Callback
    *
-   * @var callback$this->queue
+   * @var callback
    */
   protected $callback;
 
