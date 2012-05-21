@@ -190,10 +190,8 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function receive($maxMessages = null, $timeout = null, Zend_Queue $queue = null)
     {
-        $reload = false;
         if ($queue) {
             $this->setQueue($queue);
-            $reload = true;
         }
 
         $this->_amqpQueue->setName($this->getQueue()->getName());
