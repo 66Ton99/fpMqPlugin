@@ -3,19 +3,24 @@ all:
   test:
     test: 'test' # don't chage!!!
   driver:
-    class: 'fpMqAmazonQueue' #TODO implement. It doesn't work now
-    prefix: ''
-    sender: ''
+    class: 'Zend_Queue_Adapter_Rabbitmq'
+    prefix: '' #optional
+    sender: '' #optional if it sets own message will be ignored
     options:
-      name: '' #Required for Amazone SQS
-      exchange:
+      name: '' #Default queue name. Required for Amazone SQS
+      exchange: #RabbitMQ Required
         name: topic
-      driverOptions:
-        id: '' #Required for Amazone SQS
-        key: '' #Required for Amazone SQS
-        port: 22201 #Optional for Memcacheq
-        host: 127.0.0.1 #Optional for Memcacheq
-
+#      driverOptions: #Amazone SQS
+#        id: '' #Required
+#        key: '' #Required
+#      driverOptions: #Memcacheq optional
+#        port: 22201
+#        host: 127.0.0.1
+#      driverOptions: #RabbitMQ optional. It can be set in php.ini
+#        host: /
+#        port: 5672
+#        login: guest
+#        password: guest
 test:
   test:
     test: 'test2' # don't chage!!!

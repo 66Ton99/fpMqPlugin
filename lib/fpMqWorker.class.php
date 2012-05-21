@@ -24,7 +24,7 @@ class fpMqWorker
   /**
    * Callback
    *
-   * @var callback
+   * @var callback$this->queue
    */
   protected $callback;
 
@@ -61,12 +61,13 @@ class fpMqWorker
    */
   public function process()
   {
-    foreach ($this->queue->getQueues() as $queue) {
-      $messages = $this->queue->receive($queue, $this->resiveAtOnce, $this->lockTime);
-      if (count($messages) && $message = $messages->current()) {
-        static::createFork(array($message, $queue), array($this, 'execute'));
+//     foreach ($this->queue->getQueues() as $queue) {
+      $messages = $this->queue->receive(null, $this->resiveAtOnce, $this->lockTime);
+      foreach ($messages as $type => $message)
+      {
+        static::createFork(array($message, $type), array($this, 'execute'));
       }
-    }
+//     }
   }
 
   /**

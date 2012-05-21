@@ -33,7 +33,7 @@ class fpMqQueue
 
   protected $prefix;
 
-  protected $driverClassName = 'Zend_Queue_Adapter_Memcacheq';
+  protected $driverClassName = 'Zend_Queue_Adapter_Rabbitmq';
 
   /**
    * Constructor
@@ -112,7 +112,12 @@ class fpMqQueue
    */
   protected function queueFactory(Zend_Queue_Adapter_AdapterAbstract $driver)
   {
-    return new Zend_Queue($driver);
+    $this->zendQueue = new Zend_Queue($driver);
+    if ($this->baseName)
+    {
+      $this->setName($this->baseName);
+    }
+    return $this->zendQueue;
   }
 
   /**
@@ -184,11 +189,18 @@ class fpMqQueue
    * (non-PHPdoc)
    * @see Zend_Queue_Adapter_AdapterInterface::create()
    */
-  public function createQueue($name, $timeout = null)
+  public function createQueue($name = null, $timeout = null)
   {
-    if ($this->getQueue()->createQueue($this->nomalizeQueueName($name), $timeout)) {
+    if (!$name)
+    {
+      $name = $this->baseName;
+    }
+    if ($this->getQueue()->createQueue($this->nomalizeQueueName($name), $timeout))
+    {
       $this->zendQueue = $this->getQueue();
-    } else {
+    }
+    else
+    {
       require_once __DIR__ . '/fpMqException.class.php';
       throw new fpMqException("Queue '{$name}' have not initialized");
     }
@@ -202,9 +214,12 @@ class fpMqQueue
    *
    * @return Zend_Queue_Messages
    */
-  public function send($data, $queueName)
+  public function send($data, $queueName = null)
   {
-    $this->setName($queueName);
+    if ($queueName)
+    {
+      $this->setName($queueName);
+    }
     $container = new fpMqContainer($data);
     if (!empty($this->sender)) {
       $container->addMetaData('sender', $this->sender);
@@ -215,9 +230,12 @@ class fpMqQueue
   /**
    * @see fpMqAmazonQueue::receive()
    */
-  public function receive($queueName, $maxMessages = null, $timeout = null, Zend_Queue $queue = null)
+  public function receive($queueName = null, $maxMessages = null, $timeout = null, Zend_Queue $queue = null)
   {
-    $this->setName($queueName);
+    if ($queueName)
+    {
+      $this->setName($queueName);
+    }
     $messages = $this->getQueue()->receive($maxMessages, $timeout, $queue);
     $container = new fpMqContainer(null);
     $return = array();
@@ -285,9 +303,9 @@ class fpMqQueue
 
   public function isExists($name)
   {
-    if ($this->getQueue()->isSupported('isExists'))
+    if ($this->isSupported('isExists'))
     {
-      return $this->getQueue()->getAdapter()->isExists($this->nomalizeQueueName($name));
+      return $this->getAdapter()->isExists($this->nomalizeQueueName($name));
     }
     return null;
   }

@@ -91,6 +91,7 @@ class fpMqDaemon
     {
       return 'Can not stop process ' . $pid;
     }
+    @unlink($this->pidFile);
     return 'Stoped';
   }
 

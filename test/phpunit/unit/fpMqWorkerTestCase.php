@@ -32,23 +32,23 @@ class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
    */
   public function process()
   {
-    $queueMock = $this->getMock('fpMqQueue', array('getQueues', 'receive'), array(), '', false);
-    $queueMock->expects($this->once())
-      ->method('getQueues')
-      ->will(
-        $this->returnValue(
-          array(
-            'http://Someurl.com/134435/' . static::QUEUENAME,
-            'http://Someurl.com/134435/' . static::QUEUENAME . '2'
-          )
-        )
-      );
+    $queueMock = $this->getMock('fpMqQueue', array(/* 'getQueues',  */'receive'), array(), '', false);
+//     $queueMock->expects($this->once())
+//       ->method('getQueues')
+//       ->will(
+//         $this->returnValue(
+//           array(
+//             'http://Someurl.com/134435/' . static::QUEUENAME,
+//             'http://Someurl.com/134435/' . static::QUEUENAME . '2'
+//           )
+//         )
+//       );
 
     $obj = new stdClass();
     $obj->body = static::MESSAGE;
-    $queueMock->expects($this->exactly(2))
+    $queueMock->expects($this->exactly(1))
       ->method('receive')
-      ->will($this->returnValue(new ArrayIterator(array($obj))));
+      ->will($this->returnValue(new ArrayIterator(array('test1' => $obj, 'test2' => $obj))));
     $queueMock->expects($this->never())
       ->method('callback')
       ->will($this->returnValue(true));

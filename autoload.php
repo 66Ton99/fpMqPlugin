@@ -1,6 +1,7 @@
 <?php
 
 require_once 'Zend/Queue.php';
+require_once 'Zend/Queue/Exception.php';
 require_once 'Zend/Queue/Message/Iterator.php';
 require_once 'Zend/Queue/Message.php';
 require_once 'Zend/Queue/Adapter/AdapterAbstract.php';

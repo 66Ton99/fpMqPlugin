@@ -51,27 +51,22 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
             throw new Zend_Queue_Exception('Option "exchange:name" is required');
         }
         parent::__construct($options, $queue);
-        
-        if (is_array($options)) {
-            try {
-                $cnn = new AMQPConnection($options);
-                $cnn->connect();
 
-                if (!$cnn->isConnected()) {
-                    require_once 'Zend/Queue/Exception.php';
-                    throw new Zend_Queue_Exception("Unable to connect RabbitMQ server");
-                } else {
-                    $this->_cnn = $cnn;
-                    $this->_channel = new AMQPChannel($this->_cnn);
-                    $this->_amqpQueue = new AMQPQueue($this->_channel);
-                }
-            } catch (Exception $e) {
+        try {
+            $cnn = new AMQPConnection($this->_options['driverOptions']);
+            $cnn->connect();
+
+            if (!$cnn->isConnected()) {
                 require_once 'Zend/Queue/Exception.php';
-                throw new Zend_Queue_Exception($e->getMessage());
+                throw new Zend_Queue_Exception("Unable to connect RabbitMQ server");
+            } else {
+                $this->_cnn = $cnn;
+                $this->_channel = new AMQPChannel($this->_cnn);
+                $this->_amqpQueue = new AMQPQueue($this->_channel);
             }
-        } else {
+        } catch (Exception $e) {
             require_once 'Zend/Queue/Exception.php';
-            throw new Zend_Queue_Exception("The options must be an associative empty array or array of host,port,login,password...");
+            throw new Zend_Queue_Exception($e->getMessage());
         }
     }
 
