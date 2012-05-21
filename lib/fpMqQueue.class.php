@@ -241,10 +241,13 @@ class fpMqQueue
     $return = array();
     /* @var $message Zend_Queue_Message */
     foreach ($messages as $key => $message) {
-      if (empty($message->body)) continue;
+      if (empty($message->body)) continue; // TODO Add notification
       $message->body = $container->setData($message->body)->decode();
       if (!empty($this->sender) && $container->getMetaData('sender') == $this->sender) {
         $this->deleteMessage($message);
+        if (defined('DEBUG')) {
+            echo "Deleted Own\n";
+        }
         continue;
       }
       $return[] = $message->toArray();
