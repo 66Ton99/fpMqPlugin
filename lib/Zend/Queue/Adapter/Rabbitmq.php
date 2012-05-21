@@ -46,22 +46,21 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function __construct($options, Zend_Queue $queue = null)
     {
+        if (empty($options['exchange']['name'])) {
+            require_once 'Zend/Queue/Exception.php';
+            throw new Zend_Queue_Exception('Option "exchange:name" is required');
+        }
         parent::__construct($options, $queue);
-
-        if (is_array($options))
-        {
-            try
-            {
+        
+        if (is_array($options)) {
+            try {
                 $cnn = new AMQPConnection($options);
                 $cnn->connect();
 
-                if (!$cnn->isConnected())
-                {
+                if (!$cnn->isConnected()) {
                     require_once 'Zend/Queue/Exception.php';
                     throw new Zend_Queue_Exception("Unable to connect RabbitMQ server");
-                }
-                else
-                {
+                } else {
                     $this->_cnn = $cnn;
                     $this->_channel = new AMQPChannel($this->_cnn);
                     $this->_amqpQueue = new AMQPQueue($this->_channel);
@@ -70,9 +69,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
                 require_once 'Zend/Queue/Exception.php';
                 throw new Zend_Queue_Exception($e->getMessage());
             }
-        }
-        else
-        {
+        } else {
             require_once 'Zend/Queue/Exception.php';
             throw new Zend_Queue_Exception("The options must be an associative empty array or array of host,port,login,password...");
         }
@@ -98,9 +95,14 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
     protected function getExchangeOptions()
     {
       return array_merge(
-          array(/* 'routingKey' => '*',  */'type' => AMQP_EX_TYPE_DIRECT, 'flags' => AMQP_DURABLE/*  | AMQP_NOASK */),
-          $this->getQueue()->getOption('exchange')?:array()
+          array('type' => AMQP_EX_TYPE_TOPIC, 'flags' => AMQP_DURABLE),
+          $this->_options['exchange']?:array()
       );
+    }
+    
+    protected function getRoutingKey()
+    {
+      return $this->getQueue()->getOption('routingKey')?:'*';
     }
 
 
@@ -114,9 +116,10 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
         if (!$this->_exchange || $reload) {
             $exchangeOptions = $this->getExchangeOptions();
             $this->_exchange = new AMQPExchange($this->_channel);
-            $this->_exchange->setName($this->getQueue()->getName());
+            $this->_exchange->setName($exchangeOptions['name']);
             $this->_exchange->setType($exchangeOptions['type']);
             $this->_exchange->setFlags($exchangeOptions['flags']);
+            $this->_exchange->setArguments(array());
         }
         return $this;
     }
@@ -127,19 +130,18 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function create($name, $timeout = null)
     {
-        try {
-            $reload = $this->getQueue()->getName() != $name;
-            $this->getQueue()->setOption(Zend_Queue::NAME, $name);
-            $this->initExchange($reload);
-            $this->_exchange->declare();
-
+        $reload = $this->getQueue()->getName() != $name;
+        $exchangeOptions = $this->getExchangeOptions();
+        $this->getQueue()->setOption(Zend_Queue::NAME, $name);
+        $this->initExchange($reload);
+        if ($this->_exchange->declare()) {
             $this->_amqpQueue->setName($this->getQueue()->getName());
+            $this->_amqpQueue->setFlags(AMQP_DURABLE);
+            $this->_amqpQueue->setArguments(array());
             $this->_count = $this->_amqpQueue->declare();
-
-            $exchangeOptions = $this->getExchangeOptions();
-            $this->_amqpQueue->bind($name, $exchangeOptions['routingKey']);
-        } catch (Exception $e) {
-            return false;
+            $this->_amqpQueue->bind($this->_exchange->getName(), $this->getRoutingKey());
+        } else {
+            throw new AMQPExchangeException("Can not create " . $this->_exchange->getName() . " exchange");
         }
         return true;
     }
@@ -153,7 +155,13 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
         $reload = $this->getQueue()->getName() != $name;
         $this->getQueue()->setOption(Zend_Queue::NAME, $name);
         $this->initExchange($reload);
-        return $this->_exchange->delete();
+        $return = true;
+        try {
+            $this->_exchange->delete();
+        } catch (AMQPExchangeException $e) {
+          $return = false;
+        }
+        return $this->_amqpQueue->delete() && $return;
     }
 
     /**
@@ -175,8 +183,8 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
 
         return $this->_exchange->publish(
             $message,
-            $this->getQueue()->getOption('routingKey')?:'*',
-            AMQP_NOPARAM,
+            $this->getRoutingKey() ,
+            AMQP_DURABLE,
             array('delivery_mode' => 2)
         );
     }
@@ -192,31 +200,34 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
             $this->setQueue($queue);
             $reload = true;
         }
-        $this->initExchange($reload);
 
         $this->_amqpQueue->setName($this->getQueue()->getName());
 
         $result = array();
         $maxMessages = (int) $maxMessages ? (int) $maxMessages : 1;
-        if (isset($this->_options['method']) && 'consume' == $this->_options['method']) {
-            // use new AMQP_Queue_Adapter_Rabbitmq(array('method' => 'consume')) to use CONSUME approach
-            $consumeOptions = array(
-                'min' => 1,
-                'max' => $maxMessages,
-                'ack' => false,
-            );
-            $result[] = $this->_amqpQueue->consume($consumeOptions);// TODO check
-            $this->_count -= sizeof($result);
-        } else {
+//         if (isset($this->_options['method']) && 'consume' == $this->_options['method']) {
+//             // use new AMQP_Queue_Adapter_Rabbitmq(array('method' => 'consume')) to use CONSUME approach
+//             $consumeOptions = array(
+//                 'min' => 1,
+//                 'max' => $maxMessages,
+//                 'ack' => false,
+//             );
+//             $result[] = $this->_amqpQueue->consume($consumeOptions);// TODO check
+//             $this->_count -= sizeof($result);
+//         } else {
             // default approach is GET
             for ($i = $maxMessages; $i > 0; $i--) {
-                if ($message = $this->_amqpQueue->get()) {
+                if ($message = $this->_amqpQueue->get(AMQP_NOPARAM)) {
                     $result[] = array(
-                      'body' =>$message->getBody(),
+                      'body' => $message->getBody(),
+                      'handle' => $message->getDeliveryTag(),
+                      'message_id' => $message->getMessageId(),
+                      'md5' => md5($message->getBody()),
                     );
+//                     $this->_amqpQueue->nack($message->getDeliveryTag(), AMQP_NOPARAM); // It doesn't work. It freezes process
                 }
             }
-        }
+//         }
         return new Zend_Queue_Message_Iterator(array('data' => $result));
     }
 
@@ -226,11 +237,11 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function deleteMessage(Zend_Queue_Message $message)
     {
-        if (!isset($message->delivery_tag)) {
+        if (!isset($message->handle)) {
             require_once 'Zend/Queue/Exception.php';
-            throw new Zend_Queue_Exception('No delivery tag for Acking!');
+            throw new Zend_Queue_Exception('No handle for Acking!');
         }
-        return $this->_amqpQueue->ack($message->delivery_tag);
+        return $this->_amqpQueue->ack($message->handle);
     }
 
     /**
@@ -257,7 +268,7 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
      */
     public function isExists($name)
     {
-        return true;
+        return false;
     }
 
     /**
@@ -288,5 +299,10 @@ class Zend_Queue_Adapter_Rabbitmq extends Zend_Queue_Adapter_AdapterAbstract
 // //         $this->initExchange($reload);
 //         return $this->_count;
     }
+    
+//     public function __destruct()
+//     {
+//       $this->_cnn->disconnect();
+//     }
 
 }

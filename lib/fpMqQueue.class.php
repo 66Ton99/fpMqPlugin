@@ -125,6 +125,7 @@ class fpMqQueue
   protected function driverFactory(array $options)
   {
     $class = $this->driverClassName;
+    $options['exchange']['name'] = $this->nomalizeQueueName($options['exchange']['name']);
     return new $class($options);
   }
 
@@ -138,6 +139,7 @@ class fpMqQueue
    */
   public static function init(array $options)
   {
+    static::$instance = null;
     return static::$instance = new static($options);
   }
 
@@ -152,7 +154,7 @@ class fpMqQueue
   public static function sfInit()
   {
     if (!fpMqFunction::loadConfig('config/fp_mq.yml')) return false;
-    static::$instance = new static(sfConfig::get('fp_mq_driver'));
+    static::init(sfConfig::get('fp_mq_driver'));
     return true;
   }
 
@@ -186,6 +188,9 @@ class fpMqQueue
   {
     if ($this->getQueue()->createQueue($this->nomalizeQueueName($name), $timeout)) {
       $this->zendQueue = $this->getQueue();
+    } else {
+      require_once __DIR__ . '/fpMqException.class.php';
+      throw new fpMqException("Queue '{$name}' have not initialized");
     }
     return $this;
   }
@@ -195,7 +200,7 @@ class fpMqQueue
    *
    * @param mixed $data
    *
-   * @return fpMqQueue
+   * @return Zend_Queue_Messages
    */
   public function send($data, $queueName)
   {
@@ -204,8 +209,7 @@ class fpMqQueue
     if (!empty($this->sender)) {
       $container->addMetaData('sender', $this->sender);
     }
-    $this->getQueue()->send($container->encode());
-    return $this;
+    return $this->getQueue()->send($container->encode());
   }
 
   /**
@@ -222,6 +226,7 @@ class fpMqQueue
       if (empty($message->body)) continue;
       $message->body = $container->setData($message->body)->decode();
       if (!empty($this->sender) && $container->getMetaData('sender') == $this->sender) {
+        $this->deleteMessage($message);
         continue;
       }
       $return[] = $message->toArray();
@@ -286,4 +291,9 @@ class fpMqQueue
     }
     return null;
   }
+  
+//   public function __destruct()
+//   {
+//     unset($this->zendQueue);
+//   }
 }

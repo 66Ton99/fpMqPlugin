@@ -29,40 +29,64 @@ class fpMqQueueRabbitmqFnTestCase extends PHPUnit_Framework_TestCase
     $options = array();
     $options['class'] = 'Zend_Queue_Adapter_Rabbitmq';
     $options['sender'] = '';
-    $options['prefix'] = 'test'; // TODO fixed
+    $options['options']['exchange']['name'] = 'topic';
+    $options['prefix'] = 'test';
     return $options;
   }
-
-  /**
-   * @test
-   */
-  public function init()
-  {
-//     $this->markTestIncomplete('Need to finish');
-    $options = $this->getTestOptions();
-    $options['sender'] = 'me';
+  
+  
+  protected function init($options = array())
+  { 
+    static::$service = null;
+    $options = array_merge($this->getTestOptions(), $options);
     static::$service = fpMqQueue::init($options);
     $this->assertNotNull(static::$service);
-    if (!static::$service->isExists(static::$testQueueName))
+    static::$service = static::$service->createQueue(static::$testQueueName);
+  }
+  
+  /**
+   * @todo add own queue for each test
+   */
+  protected function send()
+  {
+    static::$messageId = static::$service->send(static::$message, static::$testQueueName);
+    $this->assertTrue((bool)static::$messageId);
+  }
+  
+  protected function resive()
+  {
+    $responses = array();
+    $i = 0;
+    do
     {
-      static::$service = static::$service->createQueue(static::$testQueueName);
-    }
+      sleep(1);
+      $responses = static::$service->receive('queue', 1, 3);
+      $i++;
+      if (3 < $i) $this->fail('Message does not resived');
+    } while(!count($responses));
+    $this->assertEquals(1, count($responses));
+    $this->assertInstanceOf('Zend_Queue_Message', $response = $responses->current());
+    $this->assertEquals(static::$message, $response->body); // TODO find better way
+    return $response;
   }
 
   /**
    * @test
    *
-   * @depends init
    * @todo remove this message
    */
   public function resive_noOwn()
   {
+    $options = array('sender' => 'me');
+    $this->init($options);
     $this->send();
+    $this->init($options);
+    
     $resived = true;
     try {
       $this->resive();
     } catch(PHPUnit_Framework_AssertionFailedError $e) {
-      if ('Message does not resived' == strstr($e->getMessage(), "\n", true)) {
+      if ('Message does not resived' == $e->getMessage()) {
         $resived = false;
       } else {
         throw $e;
@@ -73,71 +97,47 @@ class fpMqQueueRabbitmqFnTestCase extends PHPUnit_Framework_TestCase
 
   /**
    * @test
+   * 
    * @depends resive_noOwn
    */
-  public function connect()
+  public function send_and_recive()
   {
-    $options = $this->getTestOptions();
-    static::$service = fpMqQueue::init($options);
-    $this->assertNotNull(static::$service);
-
-    static::$service->setOption('name', 'queue');
-    $messageHandle = $this->resive(); // resive previos message and delete
-    $this->assertTrue(static::$service->deleteMessage($messageHandle));
+//     $this->init();
+    $this->send();
+//     $this->init();
+//     $this->resive();
+//     static::$service = null;
   }
 
   /**
    * @test
-   * @depends connect
-   *
-   * @todo add own queue for each test
-   */
-  public function send()
-  {
-    static::$messageId = static::$service->send(static::$message, static::$testQueueName);
-  }
-
-  /**
-   * @test
-   * @depends send
-   */
-  public function resive()
-  {
-    $responses = array();
-//     $i = 0;
-//     do
-//     {
-      sleep(10);
-      $responses = static::$service->receive('queue', 1, 3);
-//       $i++;
-//       if (10 < $i) $this->fail('Message does not resived');
-//     } while(!count($responses));
-    $this->assertEquals(1, count($responses), 'Message does not resived');
-    $this->assertInstanceOf('Zend_Queue_Message', $response = $responses->current());
-    $this->assertEquals(static::$message, $response->body); // TODO find better way
-    return $response;
-  }
-
-  /**
-   * @test
-   * @depends resive
+   * -runInSeparateProcess
+   * @depends resive_noOwn
    */
   public function resive_andDelete()
   {
+    $this->init();
     $messageHandle = $this->resive();
     $this->assertTrue(static::$service->deleteMessage($messageHandle));
   }
 
   /**
    * @test
-   * @depends resive
+   * @depends resive_andDelete
    *
    * @expectedException PHPUnit_Framework_AssertionFailedError
    * @expectedExceptionMessage Message does not resived
    */
   public function resive_isDeleted()
   {
+//     $this->init();
     $this->resive();
+  }
+  
+  public function __destruct()
+  {
+    $this->init();
+    static::$service->deleteQueue();
   }
 }
 

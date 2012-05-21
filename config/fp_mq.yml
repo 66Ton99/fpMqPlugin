@@ -8,6 +8,8 @@ all:
     sender: ''
     options:
       name: '' #Required for Amazone SQS
+      exchange:
+        name: topic
       driverOptions:
         id: '' #Required for Amazone SQS
         key: '' #Required for Amazone SQS

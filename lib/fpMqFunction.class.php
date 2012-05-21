@@ -1,5 +1,8 @@
 <?php
-define('ROOTDIR', __DIR__ . '/../../..');
+if (!defined('ROOTDIR'))
+{
+  define('ROOTDIR', __DIR__ . '/../../..');
+}
 
 /**
  *
