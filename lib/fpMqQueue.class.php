@@ -214,7 +214,7 @@ class fpMqQueue
    *
    * @return Zend_Queue_Messages
    */
-  public function send($data, $queueName = null)
+  public function send($data, $type, $queueName = null)
   {
     if ($queueName)
     {
@@ -224,6 +224,7 @@ class fpMqQueue
     if (!empty($this->sender)) {
       $container->addMetaData('sender', $this->sender);
     }
+    $container->addMetaData('type', $type);
     return $this->getQueue()->send($container->encode());
   }
 
@@ -242,7 +243,7 @@ class fpMqQueue
     /* @var $message Zend_Queue_Message */
     foreach ($messages as $key => $message) {
       if (empty($message->body)) continue; // TODO Add notification
-      $message->body = $container->setData($message->body)->decode();
+      $container->setData($message->body)->decode();
       if (!empty($this->sender) && $container->getMetaData('sender') == $this->sender) {
         $this->deleteMessage($message);
         if (defined('DEBUG')) {
@@ -250,13 +251,9 @@ class fpMqQueue
         }
         continue;
       }
-      $return[] = $message->toArray();
+      $return[] = $container;
     }
-    return new Zend_Queue_Message_Iterator(array(
-      'queue' => $this->getQueue(),
-      'messageClass' => $this->getQueue()->getMessageClass(),
-      'data' => $return
-    ));
+    return $return;
   }
 
   /**
@@ -312,7 +309,7 @@ class fpMqQueue
     }
     return null;
   }
-  
+
 //   public function __destruct()
 //   {
 //     unset($this->zendQueue);

@@ -63,9 +63,9 @@ class fpMqWorker
   {
 //     foreach ($this->queue->getQueues() as $queue) {
       $messages = $this->queue->receive(null, $this->resiveAtOnce, $this->lockTime);
-      foreach ($messages as $type => $message)
+      foreach ($messages as $message)
       {
-        call_user_func_array(array($this, 'execute'), array($message, $type));
+        call_user_func_array(array($this, 'execute'), array($message, $this->queue->getName()));
 //         static::createFork(array($message, $type), array($this, 'execute'));
       }
 //     }

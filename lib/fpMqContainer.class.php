@@ -127,6 +127,8 @@ class fpMqContainer
    *
    * @param mixed $data
    *
+   * @todo improve
+   *
    * @return fpMqContainer
    */
   public function decode()
