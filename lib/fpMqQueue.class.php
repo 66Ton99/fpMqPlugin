@@ -251,9 +251,14 @@ class fpMqQueue
         }
         continue;
       }
-      $return[] = $container;
+      $message->body = $container;
+      $return[] = $message->toArray();
     }
-    return $return;
+    return new Zend_Queue_Message_Iterator(array(
+      'queue' => $this->getQueue(),
+      'messageClass' => $this->getQueue()->getMessageClass(),
+      'data' => $return
+    ));
   }
 
   /**
