@@ -1,11 +1,13 @@
 <?php
 
 /**
+ * Daemon
  *
  * @author Ton Sharp <Forma-PRO@66ton99.org.ua>
  */
 class fpMqDaemon
 {
+
   protected $interval = 2;
   protected $callback;
   protected $notifier;
@@ -48,6 +50,16 @@ class fpMqDaemon
         echo $this->stop(), "\n";
         exit;
 
+      case 'watchdog':
+        if (true === $this->isStarted()) {
+          if (defined('DEBUG')) {
+              echo '.';
+          }
+          exit;
+        }
+        echo 'Restarting', "\n";
+
+
       case 'start':
       default:
         if (false === $this->start()) {
@@ -58,6 +70,11 @@ class fpMqDaemon
     $this->callback = $callback;
   }
 
+  /**
+   * Returns pid
+   *
+   * @return int|null
+   */
   public function getPid()
   {
     $pid = null;
@@ -68,9 +85,24 @@ class fpMqDaemon
     return $pid;
   }
 
+  /**
+   * Checks is daemon started or not
+   *
+   * @return boolean
+   */
+  public function isStarted()
+  {
+    return ($pid = $this->getPid()) && posix_kill($pid, SIG_DFL);
+  }
+
+  /**
+   * Starts daemon
+   *
+   * @return boolean
+   */
   public function start()
   {
-    if(($pid = $this->getPid()) && posix_kill($pid, SIG_DFL))
+    if($this->isStarted())
     {
       return false;
     }
@@ -80,6 +112,11 @@ class fpMqDaemon
     return true;
   }
 
+  /**
+   * Stops daemon
+   *
+   * @return string
+   */
   public function stop()
   {
     $pid = $this->getPid();
@@ -112,5 +149,23 @@ class fpMqDaemon
         echo '.';
       }
     }
+  }
+
+  /**
+   * Watchdog
+   *
+   * @return bool
+   */
+  public function watchdog()
+  {
+    if (!$this->isStarted())
+    {
+      $this->start();
+      return false;
+    }
+    if (defined('DEBUG')) {
+      echo '.';
+    }
+    return true;
   }
 }

@@ -243,6 +243,9 @@ class fpMqQueue
     /* @var $message Zend_Queue_Message */
     foreach ($messages as $key => $message) {
       if (empty($message->body)) continue; // TODO Add notification
+      if (defined('DEBUG')) {
+          echo "Recived: " . date('Y-m-d H:i:s') . " \n";
+      }
       $container->setData($message->body)->decode();
       if (!empty($this->sender) && $container->getMetaData('sender') == $this->sender) {
         $this->deleteMessage($message);
