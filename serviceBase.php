@@ -1,6 +1,6 @@
 <?php
 
-$environment = empty($environment)?'prod':$environment;
+$environment = empty($environment)?'service':$environment;
 require_once(dirname(__FILE__) . '/../../config/ProjectConfiguration.class.php');
 $configuration = ProjectConfiguration::getApplicationConfiguration(
   empty($application)?'frontend':$application,
