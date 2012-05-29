@@ -32,17 +32,14 @@ class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
    */
   public function process()
   {
-    $queueMock = $this->getMock('fpMqQueue', array(/* 'getQueues',  */'receive'), array(), '', false);
-//     $queueMock->expects($this->once())
-//       ->method('getQueues')
-//       ->will(
-//         $this->returnValue(
-//           array(
-//             'http://Someurl.com/134435/' . static::QUEUENAME,
-//             'http://Someurl.com/134435/' . static::QUEUENAME . '2'
-//           )
-//         )
-//       );
+    $queueMock = $this->getMock('fpMqQueue', array('getName',  'receive'), array(), '', false);
+    $queueMock->expects($this->exactly(2))
+      ->method('getName')
+      ->will(
+        $this->returnValue(
+          'http://Someurl.com/134435/' . static::QUEUENAME
+        )
+      );
 
     $obj = new stdClass();
     $obj->body = static::MESSAGE;
@@ -53,15 +50,17 @@ class fpMqWorkerTestCase extends PHPUnit_Framework_TestCase
       ->method('callback')
       ->will($this->returnValue(true));
 
-    $mock = $this->getMock('fpMqWorker', array('createFork', 'deamonFactory'), array(array($queueMock, 'callback'), $queueMock), '', true);
+    $mock = $this->getMock('fpMqWorker', array(/* 'createFork',  */'deamonFactory', 'execute'), array(array($queueMock, 'callback'), $queueMock), '', true);
     $mockStatic = get_class($mock);
-    $mockStatic::staticExpects($this->exactly(2))
-      ->method('createFork')
-//       ->with(
-//         $this->arrayHasKey('body'),
-//         $this->stringContains(static::QUEUENAME)
-//       )
-    ;
+//     $mockStatic::staticExpects($this->exactly(2))
+//       ->method('createFork')
+// //       ->with(
+// //         $this->arrayHasKey('body'),
+// //         $this->stringContains(static::QUEUENAME)
+// //       )
+//     ;
+    $mock->expects($this->exactly(2))
+      ->method('execute');
 
     $mock->process();
 
